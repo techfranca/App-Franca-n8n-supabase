@@ -105,19 +105,19 @@ export function IdeasCardList({
 
               <div className="text-sm mb-2">
                 <div className="font-medium">Ideia</div>
-                <div className="text-muted-foreground">{i.ideia || "—"}</div>
+                <div className="text-muted-foreground font-bold">{i.ideia || "—"}</div>
               </div>
 
               {i.formato === "Reels" && i.roteiro ? (
                 <div className="text-sm mb-2">
                   <div className="font-medium">Roteiro</div>
-                  <div className="text-muted-foreground whitespace-pre-wrap">{i.roteiro}</div>
+                  <div className="text-muted-foreground whitespace-pre-wrap font-bold">{i.roteiro}</div>
                 </div>
               ) : null}
 
               <div className="text-sm mb-2">
                 <div className="font-medium">Legenda</div>
-                <div className="text-muted-foreground">{i.legenda || "—"}</div>
+                <div className="text-muted-foreground font-bold">{i.legenda || "—"}</div>
               </div>
 
               {canSeeComments && comentariosCount > 0 ? (
@@ -170,7 +170,7 @@ export function IdeasCardList({
                 </div>
               ) : null}
 
-              <div className="grid gap-2 mb-2 text-xs">
+              <div className="grid gap-2 mb-2 text-xs text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">Data de aprovação:</span>
                   <span className="text-muted-foreground">{i.data_aprovacao || "—"}</span>
@@ -208,6 +208,7 @@ export function IdeasCardList({
               {showModeration ? (
                 <div className="mt-3 grid gap-2">
                   <Textarea
+                    className="font-bold"
                     placeholder="Comentário (obrigatório para reprovar)"
                     value={comment}
                     onChange={(e) => setComments((c) => ({ ...c, [i.id]: e.target.value }))}

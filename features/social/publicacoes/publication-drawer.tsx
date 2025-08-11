@@ -185,31 +185,31 @@ export function PublicationDrawer({ open, onOpenChange, pub, onUpdated }: Props)
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-6xl w-[90vw] max-h-[90vh] overflow-y-auto font-sans">
           <DialogHeader className="pb-4">
-            <DialogTitle className="text-xl font-semibold font-sans mb-2">
+            <DialogTitle className="text-xl font-semibold mb-2 text-[#081534]">
               Editar Publicação · {form.titulo}
             </DialogTitle>
             <div className="flex flex-wrap gap-2">
               <Button
                 onClick={handleSave}
-                className="bg-[#7de08d] text-[#081534] hover:bg-[#4b8655] font-sans text-sm px-4"
+                className="bg-[#7de08d] text-[#081534] hover:bg-[#4b8655] text-sm px-4 font-sans"
               >
                 Salvar
               </Button>
-              <Button variant="outline" onClick={handleApprove} className="font-sans text-sm px-4 bg-transparent">
+              <Button variant="outline" onClick={handleApprove} className="text-sm px-4 bg-transparent font-sans">
                 Aprovar
               </Button>
               <Button
                 variant="outline"
                 onClick={handleSchedule}
                 disabled={!(qa.a && qa.b && qa.c)}
-                className="font-sans text-sm px-4 bg-transparent"
+                className="text-sm px-4 bg-transparent font-sans"
               >
                 Agendada
               </Button>
-              <Button variant="outline" onClick={handlePublish} className="font-sans text-sm px-4 bg-transparent">
+              <Button variant="outline" onClick={handlePublish} className="text-sm px-4 bg-transparent font-sans">
                 Publicado
               </Button>
-              <Button variant="destructive" onClick={handleReject} className="font-sans text-sm px-4">
+              <Button variant="destructive" onClick={handleReject} className="text-sm px-4 font-sans">
                 Reprovar
               </Button>
             </div>
@@ -218,20 +218,20 @@ export function PublicationDrawer({ open, onOpenChange, pub, onUpdated }: Props)
           <div className="p-6 space-y-6">
             {/* Seção: Informações Básicas */}
             <div className="border border-gray-200 p-4 rounded-lg space-y-4">
-              <h3 className="font-medium text-gray-900 mb-3 font-sans">Informações Básicas</h3>
+              <h3 className="font-semibold text-[#081534] mb-3 text-sm">Informações Básicas</h3>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium font-sans">Título</Label>
+                  <Label className="text-sm font-medium text-[#081534]">Título</Label>
                   <Input
-                    className="h-11 font-sans text-sm w-full"
+                    className="h-11 text-sm w-full font-sans font-bold"
                     value={form.titulo}
                     onChange={(e) => set("titulo", e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium font-sans">Link Publicado</Label>
+                  <Label className="text-sm font-medium text-[#081534]">Link Publicado</Label>
                   <Input
-                    className="h-11 font-sans text-sm w-full"
+                    className="h-11 text-sm w-full font-sans font-bold"
                     value={form.link_publicado ?? ""}
                     onChange={(e) => set("link_publicado", e.target.value)}
                     placeholder="https://..."
@@ -241,14 +241,14 @@ export function PublicationDrawer({ open, onOpenChange, pub, onUpdated }: Props)
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium font-sans">Plataforma</Label>
+                  <Label className="text-sm font-medium text-[#081534]">Plataforma</Label>
                   <Select value={form.plataforma} onValueChange={(v) => set("plataforma", v as any)}>
-                    <SelectTrigger className="h-11 font-sans text-sm w-full">
+                    <SelectTrigger className="h-11 text-sm w-full font-sans font-bold">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="font-sans">
                       {plataformas.map((p) => (
-                        <SelectItem key={p} value={p} className="font-sans text-sm">
+                        <SelectItem key={p} value={p} className="text-sm font-sans font-bold">
                           {p}
                         </SelectItem>
                       ))}
@@ -257,14 +257,14 @@ export function PublicationDrawer({ open, onOpenChange, pub, onUpdated }: Props)
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium font-sans">Formato</Label>
+                  <Label className="text-sm font-medium text-[#081534]">Formato</Label>
                   <Select value={form.formato} onValueChange={(v) => set("formato", v as any)}>
-                    <SelectTrigger className="h-11 font-sans text-sm w-full">
+                    <SelectTrigger className="h-11 text-sm w-full font-sans font-bold">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="font-sans">
                       {formatos.map((f) => (
-                        <SelectItem key={f} value={f} className="font-sans text-sm">
+                        <SelectItem key={f} value={f} className="text-sm font-sans font-bold">
                           {f}
                         </SelectItem>
                       ))}
@@ -276,12 +276,12 @@ export function PublicationDrawer({ open, onOpenChange, pub, onUpdated }: Props)
 
             {/* Seção: Conteúdo */}
             <div className="border border-gray-200 p-4 rounded-lg space-y-4">
-              <h3 className="font-medium text-gray-900 mb-3 font-sans">Conteúdo</h3>
+              <h3 className="font-semibold text-[#081534] mb-3 text-sm">Conteúdo</h3>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium font-sans">Legenda</Label>
+                  <Label className="text-sm font-medium text-[#081534]">Legenda</Label>
                   <Textarea
-                    className="min-h-[100px] resize-none font-sans text-sm w-full"
+                    className="min-h-[100px] resize-none text-sm w-full font-sans font-bold"
                     value={form.legenda ?? ""}
                     onChange={(e) => set("legenda", e.target.value)}
                     placeholder="Escreva a legenda..."
@@ -289,10 +289,10 @@ export function PublicationDrawer({ open, onOpenChange, pub, onUpdated }: Props)
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium font-sans">Mídia</Label>
+                  <Label className="text-sm font-medium text-[#081534]">Mídia</Label>
                   <div className="rounded border p-4 bg-slate-50">
                     {!main ? (
-                      <div className="text-sm text-muted-foreground font-sans text-center py-8">Sem mídia</div>
+                      <div className="text-sm text-muted-foreground text-center py-8">Sem mídia</div>
                     ) : isVideo ? (
                       <video src={main || ""} controls className="w-full rounded object-contain max-h-[280px]" />
                     ) : (
@@ -310,7 +310,7 @@ export function PublicationDrawer({ open, onOpenChange, pub, onUpdated }: Props)
                         {thumbs.slice(0, 10).map((u, i) => (
                           <div key={i} className={cn("rounded overflow-hidden border")}>
                             {u.toLowerCase().match(/\.(mp4|mov|webm)(\?|#|$)/i) ? (
-                              <div className="text-xs text-center p-2 font-sans bg-gray-100">Vídeo</div>
+                              <div className="text-xs text-center p-2 bg-gray-100">Vídeo</div>
                             ) : (
                               <img
                                 src={u || "/placeholder.svg?height=80&width=80&query=miniatura-da-publicacao"}
@@ -330,13 +330,13 @@ export function PublicationDrawer({ open, onOpenChange, pub, onUpdated }: Props)
                     <Button
                       type="button"
                       variant="outline"
-                      className="gap-2 font-sans text-sm h-11 bg-transparent"
+                      className="gap-2 text-sm h-11 bg-transparent font-sans"
                       onClick={() => setShowUpload(true)}
                     >
                       <Upload className="h-4 w-4" />
                       Editar mídia
                     </Button>
-                    <span className="text-xs text-muted-foreground font-sans break-all">
+                    <span className="text-xs text-muted-foreground break-all">
                       {form.cover_url ? `Capa: ${form.cover_url}` : "Sem capa definida"}
                     </span>
                   </div>
@@ -346,18 +346,18 @@ export function PublicationDrawer({ open, onOpenChange, pub, onUpdated }: Props)
 
             {/* Seção: Agendamento e QA */}
             <div className="border border-gray-200 p-4 rounded-lg space-y-4">
-              <h3 className="font-medium text-gray-900 mb-3 font-sans">Agendamento e Qualidade</h3>
+              <h3 className="font-semibold text-[#081534] mb-3 text-sm">Agendamento e Qualidade</h3>
 
               {/* Data Agendada */}
               <div className="space-y-3">
-                <Label className="text-sm font-medium font-sans">Data e Hora Agendada</Label>
+                <Label className="text-sm font-medium text-[#081534]">Data e Hora Agendada</Label>
                 <div className="flex flex-col gap-3">
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         className={cn(
-                          "w-full justify-start text-left font-normal font-sans text-sm h-11",
+                          "w-full justify-start text-left font-normal text-sm h-11 font-sans",
                           !dataAgendada && "text-muted-foreground",
                         )}
                       >
@@ -372,14 +372,14 @@ export function PublicationDrawer({ open, onOpenChange, pub, onUpdated }: Props)
                         onSelect={setDataAgendada}
                         initialFocus
                         locale={ptBR}
-                        className="rounded-md border shadow-lg bg-white"
+                        className="rounded-md border shadow-lg bg-white font-sans"
                       />
                     </PopoverContent>
                   </Popover>
                   <div className="relative">
                     <Input
                       type="time"
-                      className="w-full font-sans text-sm h-11 pr-10"
+                      className="w-full text-sm h-11 pr-10 font-sans font-bold"
                       value={horaAgendada}
                       onChange={(e) => setHoraAgendada(e.target.value)}
                     />
@@ -389,9 +389,9 @@ export function PublicationDrawer({ open, onOpenChange, pub, onUpdated }: Props)
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium font-sans">Comentário</Label>
+                <Label className="text-sm font-medium text-[#081534]">Comentário</Label>
                 <Textarea
-                  className="min-h-[80px] resize-none font-sans text-sm w-full"
+                  className="min-h-[80px] resize-none text-sm w-full font-sans font-bold"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   placeholder="Comentário (obrigatório para Reprovar)"
@@ -399,19 +399,19 @@ export function PublicationDrawer({ open, onOpenChange, pub, onUpdated }: Props)
               </div>
 
               <div className="space-y-3">
-                <Label className="text-sm font-medium font-sans">Checklist antes de Agendar</Label>
+                <Label className="text-sm font-medium text-[#081534]">Checklist antes de Agendar</Label>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Checkbox checked={qa.a} onCheckedChange={(v) => setQa((q) => ({ ...q, a: Boolean(v) }))} />
-                    <span className="font-sans text-sm">Revisado por QA</span>
+                    <span className="text-sm">Revisado por QA</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Checkbox checked={qa.b} onCheckedChange={(v) => setQa((q) => ({ ...q, b: Boolean(v) }))} />
-                    <span className="font-sans text-sm">CTA conferido</span>
+                    <span className="text-sm">CTA conferido</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Checkbox checked={qa.c} onCheckedChange={(v) => setQa((q) => ({ ...q, c: Boolean(v) }))} />
-                    <span className="font-sans text-sm">Ortografia ok</span>
+                    <span className="text-sm">Ortografia ok</span>
                   </div>
                 </div>
               </div>
