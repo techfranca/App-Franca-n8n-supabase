@@ -227,15 +227,22 @@ export function PubsCardList({
     )
   }
 
+  const filteredPublications = items.filter((p) => p.status !== "excluido")
+
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {items.map((p) => {
+        {filteredPublications.map((p) => {
           const dataPost =
             (p.data_postagem ? new Date(p.data_postagem) : null)?.toISOString().slice(0, 10) ||
             (p.data_agendada ? new Date(p.data_agendada) : null)?.toISOString().slice(0, 10) ||
             ""
-          const comentarios = p.comentarios ?? []
+          const comentariosRaw = p.comentarios ?? []
+          const comentarios = Array.isArray(comentariosRaw)
+            ? comentariosRaw
+            : typeof comentariosRaw === "string" && comentariosRaw.trim()
+              ? [{ texto: comentariosRaw, autor: "Cliente", created_at: new Date().toISOString() }]
+              : []
           const comentariosCount = comentarios.length
           const lastComment = comentariosCount ? comentarios[comentariosCount - 1] : null
           const showAll = !!showAllComments[p.id]
@@ -643,6 +650,7 @@ export function PubsCardList({
                       src={
                         publicUrlFromPath(preview.pub.midia_urls[preview.index]) ||
                         "/placeholder.svg?height=300&width=600&query=preview-da-midia-da-publicacao" ||
+                        "/placeholder.svg" ||
                         "/placeholder.svg" ||
                         "/placeholder.svg"
                       }
