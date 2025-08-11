@@ -309,7 +309,7 @@ export function PubsCardList({
 
               <MediaBox p={p} />
 
-              {canManage && p.status === "publicacao_em_alteracao" && comentariosCount > 0 ? (
+              {canManage || comentariosCount > 0 ? (
                 <div className="mb-2 rounded border bg-amber-50 p-2">
                   <div className="text-xs font-medium mb-1">Feedback do cliente</div>
                   {!showAll ? (
@@ -650,6 +650,7 @@ export function PubsCardList({
                       src={
                         publicUrlFromPath(preview.pub.midia_urls[preview.index]) ||
                         "/placeholder.svg?height=300&width=600&query=preview-da-midia-da-publicacao" ||
+                        "/placeholder.svg" ||
                         "/placeholder.svg" ||
                         "/placeholder.svg" ||
                         "/placeholder.svg"
