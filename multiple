@@ -1,0 +1,1199 @@
+// lib/bridge.ts
+export async function bridge<TPayload = unknown, TData = unknown>(
+resource: string,
+action: string,
+payload?: TPayload,
+): Promise<TData> {
+const res = await fetch("/api/bridge", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ resource, action, payload }),
+})
+
+let json: any
+try {
+  json = await res.json()
+} catch {
+  throw new Error("Resposta inválida da bridge.")
+}
+
+if (!json || json.ok !== true) {
+  throw new Error(json?.error || "Falha na bridge")
+}
+
+return json.data as TData
+}
+
+// app/(app)/social/ideias/page.tsx
+"use client"
+
+import * as React from "react"
+import { PageShell } from "@/components/page-shell"
+import { useAppState } from "@/stores/app-state"
+import type { Ideia } from "@/lib/types"
+import { DataTable } from "@/components/data-table"
+import { ideiaColumns } from "@/features/social/ideias/columns"
+import { IdeaDrawer } from "@/features/social/ideias/idea-drawer"
+import { NewIdeaDialog } from "@/features/social/ideias/new-idea-dialog"
+import { ImportCsvDialog } from "@/features/social/ideias/import-csv-dialog"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
+import { bridge } from "@/lib/bridge"
+import { downloadCSV, toCSV } from "@/lib/csv"
+import { Input } from "@/components/ui/input"
+import { getUser } from "@/lib/auth-client"
+
+export default function IdeiasPage() {
+const { cliente, periodo, search } = useAppState()
+const { toast } = useToast()
+const [items, setItems] = React.useState<Ideia[]>([])
+const [globalFilter, setGlobalFilter] = React.useState("")
+const [selected, setSelected] = React.useState<Ideia | null>(null)
+const [open, setOpen] = React.useState(false)
+
+const user = React.useMemo(() => getUser(), [])
+const canCreate = user?.role === "admin" || user?.role === "colaborador"
+
+React.useEffect(() => {
+  bridge("ideias", "list", { clienteId: cliente?.id ?? null, periodo })
+    .then((data: any) => {
+      setItems((data as Ideia[]) ?? [])
+    })
+    .catch((err: any) => {
+      toast({ title: "Erro ao carregar ideias", description: err?.message || String(err), variant: "destructive" })
+    })
+}, [cliente?.id, periodo, toast])
+
+const filtered = React.useMemo(() => {
+  const q = (globalFilter || search || "").toLowerCase().trim()
+  if (!q) return items
+  return items.filter((i) => [i.titulo, i.ideia, i.legenda].some((f) => (f ?? "").toLowerCase().includes(q)))
+}, [items, globalFilter, search])
+
+function onEdit(row: Ideia) {
+  setSelected(row)
+  setOpen(true)
+}
+function onDelete(row: Ideia) {
+  // Mantém comportamento mock local (até webhook implementar delete)
+  setItems((prev) => prev.filter((i) => i.id !== row.id))
+  toast({ title: "Ideia excluída (mock)" })
+}
+
+function onUpdated(next: Ideia) {
+  setItems((prev) => prev.map((i) => (i.id === next.id ? next : i)))
+}
+function onCreated(i: Ideia) {
+  setItems((prev) => [i, ...prev])
+}
+
+function exportarCSV() {
+  const csv = toCSV(filtered)
+  downloadCSV("ideias.csv", csv)
+}
+
+return (
+  <PageShell title="Social Media · Ideias">
+    <div className="flex items-center gap-2 mb-3">
+      {canCreate && <NewIdeaDialog clienteId={cliente?.id ?? null} onCreated={onCreated} />}
+      {canCreate && <ImportCsvDialog />}
+      <Button variant="outline" onClick={exportarCSV}>
+        Exportar CSV
+      </Button>
+      <div className="ml-auto flex items-center gap-2">
+        <Input
+          placeholder="Busca local..."
+          value={globalFilter}
+          onChange={(e) => setGlobalFilter(e.target.value)}
+          className="max-w-xs"
+        />
+      </div>
+    </div>
+
+    <DataTable columns={ideiaColumns({ onEdit, onDelete })} data={filtered} pageSize={10} />
+
+    <IdeaDrawer
+      open={open}
+      onOpenChange={setOpen}
+      ideia={selected}
+      onUpdated={onUpdated}
+      onDeleted={(id) => setItems((prev) => prev.filter((i) => i.id !== id))}
+    />
+  </PageShell>
+)
+}
+
+// features/social/ideias/idea-drawer.tsx
+import React from "react"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
+import { bridge } from "@/lib/bridge"
+import { mapToUIIdea } from "@/lib/mappers"
+
+interface IdeaDrawerProps {
+open: boolean
+onOpenChange: (open: boolean) => void
+ideia: Ideia | null
+onUpdated: (updatedIdeia: Ideia) => void
+onDeleted: (id: number) => void
+}
+
+export function IdeaDrawer({ open, onOpenChange, ideia, onUpdated, onDeleted }: IdeaDrawerProps) {
+const { toast } = useToast()
+const [form, setForm] = React.useState<Ideia>(ideia ?? { id: 0, cliente_id: 0, titulo: "", plataforma: "", formato: "", ideia: "", objetivo: "", cta: "", roteiro: "", legenda: "", hashtags: "", referencia: "", dataAprovacao: null, dataPostagem: null, aprovado: false })
+const [dataAprovacao, setDataAprovacao] = React.useState<string | null>(null)
+const [dataPostagem, setDataPostagem] = React.useState<string | null>(null)
+
+async function handleSave() {
+  const payload = {
+    cliente_id: form.cliente_id,
+    titulo: form.titulo,
+    plataforma: form.plataforma,
+    formato: form.formato,
+    ideia: form.ideia,
+    objetivo: form.objetivo ?? "",
+    cta: form.cta ?? "",
+    roteiro: form.roteiro ?? "",
+    legenda: form.legenda ?? "",
+    hashtags: form.hashtags ?? "",
+    referencia: form.referencia ?? "",
+    dataAprovacao: dataAprovacao ? new Date(dataAprovacao).toISOString() : null,
+    dataPostagem: dataPostagem ? new Date(dataPostagem).toISOString() : null,
+    aprovado: Boolean(dataAprovacao) || form.status === "aprovada",
+  }
+
+  const dataFromN8n = await bridge("ideias", "update", payload)
+  const ui = mapToUIIdea(dataFromN8n, form)
+  onUpdated(ui)
+  setForm(ui)
+  toast({ title: "Ideia atualizada" })
+}
+
+async function handleDelete() {
+  try {
+    await bridge("ideias", "delete", { id: form.id })
+    toast({ title: "Ideia excluída" })
+    onDeleted(form.id)
+    onOpenChange(false)
+  } catch (err: any) {
+    toast({ title: "Erro ao excluir", description: err?.message || String(err), variant: "destructive" })
+  }
+}
+
+return (
+  <div>
+    {/* Drawer content here */}
+    <Button onClick={handleSave} className="bg-[#7de08d] text-[#081534] hover:bg-[#4b8655]">Atualizar</Button>
+    <Button onClick={handleDelete}>Excluir</Button>
+  </div>
+)
+}
+
+// features/social/ideias/new-idea-dialog.tsx
+import React from "react"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
+import { bridge } from "@/lib/bridge"
+import { mapToUIIdea } from "@/lib/mappers"
+import { useAppState, useClientes } from "@/stores/app-state"
+
+interface NewIdeaDialogProps {
+clienteId: number | null
+onCreated: (newIdeia: Ideia) => void
+}
+
+export function NewIdeaDialog({ clienteId, onCreated }: NewIdeaDialogProps) {
+const { toast } = useToast()
+const [form, setForm] = React.useState<Ideia>({ id: 0, cliente_id: clienteId ?? 0, titulo: "", plataforma: "", formato: "", ideia: "", objetivo: "", cta: "", roteiro: "", legenda: "", hashtags: "", referencia: "", dataAprovacao: null, dataPostagem: null, aprovado: false })
+const [dataAprovacao, setDataAprovacao] = React.useState<string | null>(null)
+const [dataPostagem, setDataPostagem] = React.useState<string | null>(null)
+const [open, setOpen] = React.useState(false)
+const [pending, setPending] = React.useState(false)
+const [data, setData] = React.useState({ cliente_id: clienteId, titulo: "", plataforma: "Instagram", formato: "Reels", ideia: "", objetivo: "", cta: "", roteiro: "", legenda: "", hashtags: "", referencia: "" })
+const isCliente = !!clienteId
+const { setCliente } = useAppState()
+const { clientes } = useClientes()
+
+async function create(fallbackStatus: Ideia["status"]) {
+  if (!data.titulo || !data.cliente_id) {
+    toast({ title: "Preencha Título e selecione um Cliente", variant: "destructive" })
+    return
+  }
+  setPending(true)
+  try {
+    const payload = {
+      cliente_id: data.cliente_id ?? "",
+      titulo: data.titulo ?? "",
+      plataforma: data.plataforma ?? "Instagram",
+      formato: data.formato ?? "Reels",
+      ideia: data.ideia ?? "",
+      objetivo: data.objetivo ?? "",
+      cta: data.cta ?? "",
+      roteiro: data.roteiro ?? "",
+      legenda: data.legenda ?? "",
+      hashtags: data.hashtags ?? "",
+      referencia: data.referencia ?? "",
+      dataAprovacao: dataAprovacao ? new Date(dataAprovacao).toISOString() : null,
+      dataPostagem: dataPostagem ? new Date(dataPostagem).toISOString() : null,
+      aprovado: false,
+    }
+
+    const dataFromN8n = await bridge("ideias", "create", payload)
+    const ui = mapToUIIdea(dataFromN8n, fallbackStatus)
+    onCreated(ui)
+    toast({ title: "Ideia criada" })
+    setOpen(false)
+  } catch (err: any) {
+    toast({ title: "Erro ao criar", description: err?.message ?? "Falha ao enviar ao n8n", variant: "destructive" })
+  } finally {
+    setPending(false)
+  }
+}
+
+return (
+  <div>
+    {/* Dialog content here */}
+    <Button onClick={() => create("rascunho")}>Criar Ideia</Button>
+    <Button onClick={() => create(isCliente ? "rascunho" : "ideia_em_aprovacao")}>Criar & Enviar para aprovação</Button>
+  </div>
+)
+}
+
+// stores/app-state.tsx
+import { create } from "zustand"
+import { persist } from "zustand/middleware"
+import { getCliente } from "@/lib/auth-client"
+import { useQuery } from "@tanstack/react-query"
+import * as React from "react"
+
+interface AppState {
+cliente: { id: string; nome: string } | null
+setCliente: (cliente: { id: string; nome: string } | null) => void
+periodo: string
+setPeriodo: (periodo: string) => void
+search: string
+setSearch: (search: string) => void
+}
+
+export const useAppState = create<AppState>()(
+persist(
+  (set) => ({
+    cliente: getCliente(),
+    setCliente: (cliente) => set({ cliente }),
+    periodo: new Date().toISOString().slice(0, 7),
+    setPeriodo: (periodo) => set({ periodo }),
+    search: "",
+    setSearch: (search) => set({ search }),
+  }),
+  {
+    name: "app-state",
+  }
+)
+)
+
+export interface Cliente {
+id: string
+nome: string
+}
+
+interface ClientesState {
+clientes: Cliente[]
+setClientes: (clientes: Cliente[]) => void
+}
+
+export const useClientes = create<ClientesState>((set) => ({
+clientes: [],
+setClientes: (clientes) => set({ clientes }),
+}))
+
+export function useFetchClientes() {
+const { setClientes } = useClientes()
+
+React.useEffect(() => {
+  setClientes([
+    { id: "cli_1", nome: "Padaria Franca" },
+    { id: "cli_2", nome: "Franca Fitness" },
+    { id: "cli_3", nome: "Franca Tech" },
+    { id: "cli_3haus", nome: "3haus" }, // novo cliente
+  ])
+}, [])
+
+return useQuery({
+  queryKey: ["clientes"],
+  queryFn: async () => {
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    return [
+      { id: "cli_1", nome: "Padaria Franca" },
+      { id: "cli_2", nome: "Franca Fitness" },
+      { id: "cli_3", nome: "Franca Tech" },
+    ]
+  },
+})
+}
+
+// features/social/ideias/ideas-card-list.tsx
+"use client"
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Ideia } from "@/lib/types"
+import { formatDistanceToNow } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import * as React from "react"
+import { MoreVertical, ThumbsDown, ThumbsUp } from 'lucide-react'
+import { useToast } from "@/hooks/use-toast"
+import { useUser } from "@/hooks/use-user"
+import { api } from "@/lib/api"
+import { useAppState } from "@/stores/app-state"
+
+interface IdeasCardListProps {
+  ideias: Ideia[]
+  isLoading?: boolean
+  refetch: () => void
+}
+
+export function IdeasCardList({ ideias, isLoading, refetch }: IdeasCardListProps) {
+  const { toast } = useToast()
+  const { user } = useUser()
+  const { cliente } = useAppState()
+  const [likes, setLikes] = React.useState<Record<string, boolean>>({})
+  const [dislikes, setDislikes] = React.useState<Record<string, boolean>>({})
+  const [showAllComments, setShowAllComments] = React.useState<Record<string, boolean>>({})
+
+  const canEdit = user?.role === "admin" || user?.role === "colaborador"
+  const canLike = user?.role === "admin" || user?.role === "colaborador" || user?.role === "cliente"
+
+  async function like(id: string) {
+    if (!canLike) return
+    setLikes((prev) => ({ ...prev, [id]: true }))
+    try {
+      await api.post(`/api/ideias/${id}/like`)
+      refetch()
+    } catch (err: any) {
+      toast({ title: "Falha ao curtir", description: err?.message || String(err), variant: "destructive" })
+    } finally {
+      setLikes((prev) => ({ ...prev, [id]: false }))
+    }
+  }
+
+  async function dislike(id: string) {
+    if (!canLike) return
+    setDislikes((prev) => ({ ...prev, [id]: true }))
+    try {
+      await api.post(`/api/ideias/${id}/dislike`)
+      refetch()
+    } catch (err: any) {
+      toast({ title: "Falha ao descurtir", description: err?.message || String(err), variant: "destructive" })
+    } finally {
+      setDislikes((prev) => ({ ...prev, [id]: false }))
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i}>
+            <CardHeader>
+              <Skeleton className="h-4 w-32" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-24" />
+            </CardContent>
+            <CardFooter className="flex items-center justify-between text-xs text-muted-foreground">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-12" />
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+    )
+  }
+
+  if (!ideias?.length) {
+    return <div className="text-center text-muted-foreground">Nenhuma ideia encontrada.</div>
+  }
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      {ideias.map((i) => {
+        const diff = formatDistanceToNow(new Date(i.created_at), { addSuffix: true, locale: ptBR })
+        const likesCount = i.likes ?? 0
+        const dislikesCount = i.dislikes ?? 0
+        const comentariosCount = i.comentarios?.length ?? 0
+        const comments = i.comentarios ?? []
+        const lastComment = comments.length ? comments[comments.length - 1] : null
+        const showAll = !!showAllComments[i.id]
+
+        return (
+          <Card key={i.id}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="space-y-1">
+                <div className="text-sm font-medium">{i.titulo}</div>
+                <p className="text-xs text-muted-foreground">
+                  Criado {diff} {i.autor ? `por ${i.autor}` : null}
+                </p>
+              </div>
+              {canEdit ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <span className="sr-only">Open menu</span>
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>Editar</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>Excluir</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : null}
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">{i.ideia}</p>
+            </CardContent>
+            {canEdit && comments.length > 0 ? (
+              <div className="mt-3 rounded border bg-slate-50 p-2">
+                {!showAll ? (
+                  <div className="text-xs">
+                    <div className="mb-1 text-muted-foreground">
+                      <span className="font-medium">{lastComment?.autor || "Comentário"}</span>{" "}
+                      <span>
+                        — {lastComment?.created_at ? new Date(lastComment.created_at).toLocaleString("pt-BR") : ""}
+                      </span>
+                    </div>
+                    <div className="whitespace-pre-wrap">{lastComment?.texto || ""}</div>
+                    {comments.length > 1 ? (
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          className="text-[#4b8655] text-xs underline"
+                          onClick={() => setShowAllComments((m) => ({ ...m, [i.id]: true }))}
+                        >
+                          Ver todos ({comments.length})
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="text-xs space-y-2">
+                    {comments.map((c, idx) => (
+                      <div key={idx} className="rounded border bg-white p-2">
+                        <div className="mb-1 text-muted-foreground">
+                          <span className="font-medium">{c.autor || "Comentário"}</span>{" "}
+                          <span>— {c.created_at ? new Date(c.created_at).toLocaleString("pt-BR") : ""}</span>
+                        </div>
+                        <div className="whitespace-pre-wrap">{c.texto || ""}</div>
+                      </div>
+                    ))}
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        className="text-[#4b8655] text-xs underline"
+                        onClick={() => setShowAllComments((m) => ({ ...m, [i.id]: false }))}
+                      >
+                        Ocultar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
+            <CardFooter className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center space-x-4">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => like(String(i.id))}
+                  disabled={likes[String(i.id)]}
+                >
+                  <ThumbsUp className="h-4 w-4" />
+                  <span className="ml-2">{likesCount}</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => dislike(String(i.id))}
+                  disabled={dislikes[String(i.id)]}
+                >
+                  <ThumbsDown className="h-4 w-4" />
+                  <span className="ml-2">{dislikesCount}</span>
+                </Button>
+              </div>
+              <span>{comentariosCount} comentários</span>
+            </CardFooter>
+          </Card>
+        )
+      })}
+    </div>
+  )
+}
+
+// features/social/publicacoes/pubs-card-list.tsx
+"use client"
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Publicacao } from "@/lib/types"
+import { formatDistanceToNow } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import * as React from "react"
+import { MoreVertical, ThumbsDown, ThumbsUp } from 'lucide-react'
+import { useToast } from "@/hooks/use-toast"
+import { useUser } from "@/hooks/use-user"
+import { api } from "@/lib/api"
+import { useAppState } from "@/stores/app-state"
+import { notifyMediaUpsert } from "@/lib/notify-media"
+
+interface PubsCardListProps {
+  publicacoes: Publicacao[]
+  isLoading?: boolean
+  refetch: () => void
+}
+
+export function PubsCardList({ publicacoes, isLoading, refetch }: PubsCardListProps) {
+  const { toast } = useToast()
+  const { user } = useUser()
+  const { cliente } = useAppState()
+  const [likes, setLikes] = React.useState<Record<string, boolean>>({})
+  const [dislikes, setDislikes] = React.useState<Record<string, boolean>>({})
+  const [showAllComments, setShowAllComments] = React.useState<Record<string, boolean>>({})
+
+  const canManage = user?.role === "admin" || user?.role === "colaborador"
+  const canLike = user?.role === "admin" || user?.role === "colaborador" || user?.role === "cliente"
+
+  async function like(id: string) {
+    if (!canLike) return
+    setLikes((prev) => ({ ...prev, [id]: true }))
+    try {
+      await api.post(`/api/publicacoes/${id}/like`)
+      refetch()
+    } catch (err: any) {
+      toast({ title: "Falha ao curtir", description: err?.message || String(err), variant: "destructive" })
+    } finally {
+      setLikes((prev) => ({ ...prev, [id]: false }))
+    }
+  }
+
+  async function dislike(id: string) {
+    if (!canLike) return
+    setDislikes((prev) => ({ ...prev, [id]: true }))
+    try {
+      await api.post(`/api/publicacoes/${id}/dislike`)
+      refetch()
+    } catch (err: any) {
+      toast({ title: "Falha ao descurtir", description: err?.message || String(err), variant: "destructive" })
+    } finally {
+      setDislikes((prev) => ({ ...prev, [id]: false }))
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i}>
+            <CardHeader>
+              <Skeleton className="h-4 w-32" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-24" />
+            </CardContent>
+            <CardFooter className="flex items-center justify-between text-xs text-muted-foreground">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-12" />
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+    )
+  }
+
+  if (!publicacoes?.length) {
+    return <div className="text-center text-muted-foreground">Nenhuma publicação encontrada.</div>
+  }
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      {publicacoes.map((p) => {
+        const diff = formatDistanceToNow(new Date(p.created_at), { addSuffix: true, locale: ptBR })
+        const likesCount = p.likes ?? 0
+        const dislikesCount = p.dislikes ?? 0
+        const comentariosCount = p.comentarios?.length ?? 0
+        const comments = p.comentarios ?? []
+        const lastComment = comments.length ? comments[comments.length - 1] : null
+        const showAll = !!showAllComments[p.id]
+
+        return (
+          <Card key={p.id}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="space-y-1">
+                <div className="text-sm font-medium">{p.titulo}</div>
+                <p className="text-xs text-muted-foreground">
+                  Criado {diff} {p.autor ? `por ${p.autor}` : null}
+                </p>
+              </div>
+              {canManage ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <span className="sr-only">Open menu</span>
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>Editar</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>Excluir</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : null}
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">{p.legenda}</p>
+            </CardContent>
+            {canManage && comments.length > 0 ? (
+              <div className="mt-3 rounded border bg-slate-50 p-2">
+                {!showAll ? (
+                  <div className="text-xs">
+                    <div className="mb-1 text-muted-foreground">
+                      <span className="font-medium">{lastComment?.autor || "Comentário"}</span>{" "}
+                      <span>
+                        — {lastComment?.created_at ? new Date(lastComment.created_at).toLocaleString("pt-BR") : ""}
+                      </span>
+                    </div>
+                    <div className="whitespace-pre-wrap">{lastComment?.texto || ""}</div>
+                    {comments.length > 1 ? (
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          className="text-[#4b8655] text-xs underline"
+                          onClick={() => setShowAllComments((m) => ({ ...m, [p.id]: true }))}
+                        >
+                          Ver todos ({comments.length})
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="text-xs space-y-2">
+                    {comments.map((c, idx) => (
+                      <div key={idx} className="rounded border bg-white p-2">
+                        <div className="mb-1 text-muted-foreground">
+                          <span className="font-medium">{c.autor || "Comentário"}</span>{" "}
+                          <span>— {c.created_at ? new Date(c.created_at).toLocaleString("pt-BR") : ""}</span>
+                        </div>
+                        <div className="whitespace-pre-wrap">{c.texto || ""}</div>
+                      </div>
+                    ))}
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        className="text-[#4b8655] text-xs underline"
+                        onClick={() => setShowAllComments((m) => ({ ...m, [p.id]: false }))}
+                      >
+                        Ocultar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
+            <CardFooter className="flex items-center justify-between text-xs text-muted-foreground mt-3">
+              <div className="flex items-center space-x-4">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => like(String(p.id))}
+                  disabled={likes[String(p.id)]}
+                >
+                  <ThumbsUp className="h-4 w-4" />
+                  <span className="ml-2">{likesCount}</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => dislike(String(p.id))}
+                  disabled={dislikes[String(p.id)]}
+                >
+                  <ThumbsDown className="h-4 w-4" />
+                  <span className="ml-2">{dislikesCount}</span>
+                </Button>
+              </div>
+              <span>{comentariosCount} comentários</span>
+            </CardFooter>
+          </Card>
+        )
+      })}
+    </div>
+  )
+}
+
+// features/social/publicacoes/publication-drawer.tsx
+"use client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { format } from "date-fns";
+import { Calendar } from 'lucide-react';
+import * as React from "react";
+import { Calendar as CalendarDate } from "@/components/ui/calendar";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { useUser } from "@/hooks/use-user";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription
+} from "@/components/ui/drawer";
+import { Publicacao } from "@/lib/types";
+import { Checkbox } from "@/components/ui/checkbox";
+import { UploadButton } from "@/lib/uploadthing";
+import { useUploadThing } from "@/lib/uploadthing";
+import { FileCard } from "@/components/file-card";
+import { buildPublicationUpdatePayload } from "@/lib/publicacoes";
+import { bridge } from "@/lib/bridge";
+import { mapToUIPublicacao } from "@/lib/mappers";
+import { useAppState } from "@/stores/app-state";
+import { formatRelative } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { notifyMediaUpsert } from "@/lib/notify-media"
+
+const formSchema = z.object({
+  titulo: z.string().min(3, {
+    message: "Título precisa ter pelo menos 3 caracteres.",
+  }),
+  legenda: z.string().min(10, {
+    message: "Legenda precisa ter pelo menos 10 caracteres.",
+  }),
+  cliente_id: z.string().min(3, {
+    message: "Cliente precisa ser selecionado.",
+  }),
+  agendado_para: z.date().nullable(),
+  status: z.enum(["draft", "pending", "scheduled", "published"]),
+  imagens: z.array(z.string()).optional(),
+  videos: z.array(z.string()).optional(),
+});
+
+interface PublicationDrawerProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  publicacao?: Publicacao;
+  onUpdated?: (pub: Publicacao) => void;
+}
+
+export function PublicationDrawer({
+  open,
+  setOpen,
+  publicacao,
+  onUpdated,
+}: PublicationDrawerProps) {
+  const { toast } = useToast();
+  const { user } = useUser();
+  const { cliente } = useAppState();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [files, setFiles] = React.useState<string[]>(publicacao?.imagens || []);
+  const [videos, setVideos] = React.useState<string[]>(publicacao?.videos || []);
+  const [scheduled, setScheduled] = React.useState(!!publicacao?.agendado_para);
+  const [date, setDate] = React.useState<Date | undefined>(
+    publicacao?.agendado_para ? new Date(publicacao.agendado_para) : undefined
+  );
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      titulo: publicacao?.titulo || "",
+      legenda: publicacao?.legenda || "",
+      cliente_id: publicacao?.cliente_id || cliente?.id || "",
+      agendado_para: publicacao?.agendado_para ? new Date(publicacao.agendado_para) : null,
+      status: publicacao?.status || "draft",
+      imagens: publicacao?.imagens || [],
+      videos: publicacao?.videos || [],
+    },
+  });
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsSubmitting(true);
+    try {
+      const updated = {
+        ...publicacao,
+        ...values,
+        imagens: files,
+        videos: videos,
+        agendado_para: date,
+      };
+
+      await doUpload(files, { ...updated, type: "image" });
+      await doUpload(videos, { ...updated, type: "video" });
+
+      toast({
+        title: "Publicação atualizada com sucesso!",
+      });
+      setOpen(false);
+      onUpdated?.(updated as Publicacao);
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Algo deu errado.",
+        description: "Não foi possível atualizar a publicação.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function doUpload(files: string[], opts: any) {
+    if (!files?.length) return;
+
+    setIsSubmitting(true);
+    try {
+      const updated = {
+        ...opts,
+        imagens: files,
+        videos: videos,
+        agendado_para: date,
+      };
+
+      // Chama o webhook com todos os campos da publicação (armazenará no banco)
+      await notifyMediaUpsert(updated)
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Algo deu errado.",
+        description: "Não foi possível atualizar a publicação.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <Drawer open={open} onOpenChange={setOpen}>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>
+            {publicacao?.titulo ? "Editar" : "Criar"} Publicação
+          </DrawerTitle>
+          <DrawerDescription>
+            {publicacao
+              ? `Publicação criada ${formatRelative(
+                  new Date(publicacao.created_at),
+                  new Date(),
+                  {
+                    locale: ptBR,
+                  }
+                )}`
+              : "Crie uma nova publicação para o seu cliente."}
+          </DrawerDescription>
+        </DrawerHeader>
+        <Separator />
+        <div className="p-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="titulo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Título</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Título da publicação" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="legenda"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Legenda</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Legenda da publicação"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="cliente_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cliente</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um cliente" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="cli_1">Padaria Franca</SelectItem>
+                        <SelectItem value="cli_2">Franca Fitness</SelectItem>
+                        <SelectItem value="cli_3">Franca Tech</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex items-center space-x-2">
+                <FormField
+                  control={form.control}
+                  name="agendado_para"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <div className="flex items-center">
+                        <Checkbox
+                          checked={scheduled}
+                          onCheckedChange={(checked) => {
+                            setScheduled(checked || false);
+                            if (!checked) {
+                              setDate(undefined);
+                              form.setValue("agendado_para", null);
+                            }
+                          }}
+                        />
+                        <FormLabel className="ml-2 text-sm font-medium">
+                          Agendar publicação?
+                        </FormLabel>
+                      </div>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-[240px] pl-3 text-left font-normal",
+                                !date && "text-muted-foreground"
+                              )}
+                            >
+                              {date ? (
+                                format(date, "PPP")
+                              ) : (
+                                <span>Escolha uma data</span>
+                              )}
+                              <Calendar className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarDate
+                            mode="single"
+                            selected={date}
+                            onSelect={(date) => {
+                              setDate(date);
+                              form.setValue("agendado_para", date);
+                            }}
+                            disabled={(date) =>
+                              date < new Date()
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="draft">Rascunho</SelectItem>
+                        <SelectItem value="pending">Pendente</SelectItem>
+                        <SelectItem value="scheduled">Agendado</SelectItem>
+                        <SelectItem value="published">Publicado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div>
+                <Label>Imagens</Label>
+                <div className="flex flex-wrap gap-2">
+                  {files.map((file) => (
+                    <FileCard
+                      key={file}
+                      url={file}
+                      onDelete={() => setFiles((prev) => prev.filter((f) => f !== file))}
+                    />
+                  ))}
+                </div>
+                <UploadButton
+                  endpoint="imageUploader"
+                  onClientUploadComplete={(res) => {
+                    console.log("Files: ", res);
+                    setFiles((prev) => [...(prev || []), ...(res || [])]);
+                    toast({
+                      title: "Upload completo!",
+                      description: "As imagens foram enviadas com sucesso.",
+                    });
+                  }}
+                  onUploadError={(error) => {
+                    toast({
+                      title: "Algo deu errado!",
+                      description: error.message,
+                      variant: "destructive",
+                    });
+                  }}
+                />
+              </div>
+
+              <div>
+                <Label>Vídeos</Label>
+                <div className="flex flex-wrap gap-2">
+                  {videos.map((file) => (
+                    <FileCard
+                      key={file}
+                      url={file}
+                      onDelete={() => setVideos((prev) => prev.filter((f) => f !== file))}
+                    />
+                  ))}
+                </div>
+                <UploadButton
+                  endpoint="videoUploader"
+                  onClientUploadComplete={(res) => {
+                    console.log("Files: ", res);
+                    setVideos((prev) => [...(prev || []), ...(res || [])]);
+                    toast({
+                      title: "Upload completo!",
+                      description: "Os vídeos foram enviados com sucesso.",
+                    });
+                  }}
+                  onUploadError={(error) => {
+                    toast({
+                      title: "Algo deu errado!",
+                      description: error.message,
+                      variant: "destructive",
+                    });
+                  }}
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                {publicacao?.id ? (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive">Excluir</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Essa ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction>Excluir</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                ) : null}
+                <DrawerClose asChild>
+                  <Button variant="outline">Cancelar</Button>
+                </DrawerClose>
+                <Button type="submit" disabled={isSubmitting}>
+                  Salvar
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
