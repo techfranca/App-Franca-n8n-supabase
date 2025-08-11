@@ -6,11 +6,8 @@ import { useAppState, useClientes } from "@/stores/app-state"
 import type { Ideia } from "@/lib/types"
 import { IdeaDrawer } from "@/features/social/ideias/idea-drawer"
 import { NewIdeaDialog } from "@/features/social/ideias/new-idea-dialog"
-import { ImportCsvDialog } from "@/features/social/ideias/import-csv-dialog"
-import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { bridge } from "@/lib/bridge"
-import { downloadCSV, toCSV } from "@/lib/csv"
 import { Input } from "@/components/ui/input"
 import { IdeasCardList } from "@/features/social/ideias/ideas-card-list"
 import { Card } from "@/components/ui/card"
@@ -18,9 +15,43 @@ import { normalizeIdeasList } from "@/lib/normalize-ideas-list"
 import { getUser } from "@/lib/auth-client"
 import { IDEA_STATUS, nextIdeaStatusOnClientApprove, nextIdeaStatusOnClientReject } from "@/lib/status"
 import { buildIdeaUpdatePayload, buildPublicationCreateFromIdeaPayload } from "@/lib/build-payload"
+import { ClientCombobox } from "@/components/client-combobox"
+import { formatMonthYear } from "@/lib/utils-date"
+import { Button } from "@/components/ui/button"
+import { Calendar } from "lucide-react"
+import { addMonths } from "date-fns"
+import { Separator } from "@/components/ui/separator"
+
+function MonthPicker({
+  value,
+  onChange,
+}: {
+  value: { month: number; year: number }
+  onChange: (v: { month: number; year: number }) => void
+}) {
+  const current = new Date(value.year, value.month - 1, 1)
+  function shift(offset: number) {
+    const d = addMonths(current, offset)
+    onChange({ month: d.getMonth() + 1, year: d.getFullYear() })
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <Button variant="outline" size="icon" aria-label="Mês anterior" onClick={() => shift(-1)}>
+        {"<"}
+      </Button>
+      <div className="flex items-center gap-2 px-2 text-sm">
+        <Calendar className="h-4 w-4" />
+        {formatMonthYear(current)}
+      </div>
+      <Button variant="outline" size="icon" aria-label="Próximo mês" onClick={() => shift(1)}>
+        {">"}
+      </Button>
+    </div>
+  )
+}
 
 export default function IdeiasPage() {
-  const { cliente, periodo, search } = useAppState()
+  const { cliente, periodo, setCliente, setPeriodo } = useAppState()
   const clientes = useClientes()
   const { toast } = useToast()
   const user = React.useMemo(() => getUser(), [])
@@ -42,6 +73,11 @@ export default function IdeiasPage() {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
   const reqIdRef = React.useRef(0)
+
+  const restrictedClientes = React.useMemo(() => {
+    const myClient = effectiveCliente
+    return user?.role === "cliente" && myClient ? [myClient] : clientes
+  }, [clientes, user?.role, effectiveCliente])
 
   const refetch = React.useCallback(async () => {
     if (isClient && !effectiveCliente?.id) return
@@ -82,10 +118,10 @@ export default function IdeiasPage() {
   }, [refetch])
 
   const filtered = React.useMemo(() => {
-    const q = (localFilter || search || "").toLowerCase().trim()
+    const q = localFilter.toLowerCase().trim()
     if (!q) return items
     return items.filter((i) => [i.titulo, i.ideia, i.legenda].some((f) => (f ?? "").toLowerCase().includes(q)))
-  }, [items, localFilter, search])
+  }, [items, localFilter])
 
   function onEdit(row: Ideia) {
     setSelected(row)
@@ -104,17 +140,10 @@ export default function IdeiasPage() {
     setItems((prev) => [i, ...prev])
   }
 
-  function exportarCSV() {
-    const csv = toCSV(filtered)
-    downloadCSV("ideias.csv", csv)
-  }
-
   const getClienteNome = React.useCallback((id: string) => clientes.find((c) => c.id === id)?.nome ?? "—", [clientes])
 
-  // Aprovação do cliente: envia update_aprovado e, após sucesso, cria publicação via webhook
   async function approve(item: Ideia, comment?: string) {
     const next = nextIdeaStatusOnClientApprove(item.status)
-    // Otimista: muda status para em_design e esconde moderação
     const optimistic = items.map((i) => (i.id === item.id ? { ...i, status: next } : i))
     setItems(optimistic)
 
@@ -123,16 +152,13 @@ export default function IdeiasPage() {
       const payload = buildIdeaUpdatePayload(full, { status: next, comentario: comment ?? "" })
       await bridge("ideias", "update_aprovado", payload)
 
-      // 1) Criar publicação a partir da ideia aprovada (envia TODOS os campos da ideia)
       const pubPayload = buildPublicationCreateFromIdeaPayload(full)
       try {
         await bridge("publicacoes", "create_from_idea", pubPayload)
       } catch (e1: any) {
-        // Fallback: alguns fluxos podem esperar apenas "create"
         await bridge("publicacoes", "create", pubPayload)
       }
 
-      // 2) Done
       toast({ title: "Ideia aprovada e publicação criada" })
     } catch (err: any) {
       setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: item.status } : i)))
@@ -153,7 +179,6 @@ export default function IdeiasPage() {
     }
     const next = nextIdeaStatusOnClientReject(item.status)
     const prevSnapshot = items
-    // Otimista: fecha botões e campo de comentário
     setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: next, needs_reapproval: false } : i)))
     try {
       const payload = buildIdeaUpdatePayload(
@@ -171,19 +196,27 @@ export default function IdeiasPage() {
 
   return (
     <PageShell title="Social Media · Ideias">
-      <div className="flex items-center gap-2 mb-3">
-        {canCreate && <NewIdeaDialog clienteId={effectiveCliente?.id ?? cliente?.id ?? null} onCreated={onCreated} />}
-        {canCreate && <ImportCsvDialog />}
-        <Button variant="outline" onClick={exportarCSV}>
-          Exportar CSV
-        </Button>
+      <div className="flex items-center gap-3 mb-6">
+        <ClientCombobox
+          clientes={restrictedClientes}
+          value={cliente?.id ?? null}
+          onChange={(id) => {
+            if (user?.role === "cliente") return
+            const c = restrictedClientes.find((x) => x.id === id) ?? null
+            setCliente(c)
+          }}
+        />
+        <Separator orientation="vertical" className="h-6" />
+        <MonthPicker value={periodo} onChange={setPeriodo} />
+        <Separator orientation="vertical" className="h-6" />
+        <Input
+          placeholder="Busca (título / ideia / legenda)..."
+          value={localFilter}
+          onChange={(e) => setLocalFilter(e.target.value)}
+          className="max-w-xs"
+        />
         <div className="ml-auto">
-          <Input
-            placeholder="Busca (título / ideia / legenda)..."
-            value={localFilter}
-            onChange={(e) => setLocalFilter(e.target.value)}
-            className="max-w-xs"
-          />
+          {canCreate && <NewIdeaDialog clienteId={effectiveCliente?.id ?? cliente?.id ?? null} onCreated={onCreated} />}
         </div>
       </div>
 

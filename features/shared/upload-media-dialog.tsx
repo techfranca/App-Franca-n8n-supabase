@@ -5,7 +5,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
-import { UploadCloud, ImageIcon, VideoIcon, Crown, Trash2 } from "lucide-react"
+import { UploadCloud, ImageIcon, VideoIcon, Crown, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
+import { publicUrlFromPath } from "@/lib/public-url"
 
 type FileItem = {
   file: File
@@ -44,6 +45,14 @@ export function UploadMediaDialog({
   const [submitting, setSubmitting] = React.useState(false)
   const [selectedCover, setSelectedCover] = React.useState<string | null>(initial?.coverPath ?? null)
   const [dragOver, setDragOver] = React.useState(false)
+  const [carouselIndex, setCarouselIndex] = React.useState(0)
+
+  const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOver(false)
+    appendFiles(e.dataTransfer.files)
+  }
 
   React.useEffect(() => {
     if (open) {
@@ -52,6 +61,7 @@ export function UploadMediaDialog({
       setNewItems([])
       setProgress(0)
       setSubmitting(false)
+      setCarouselIndex(0)
     }
   }, [open, initial?.paths, initial?.coverPath])
 
@@ -74,6 +84,7 @@ export function UploadMediaDialog({
       }
       return next
     })
+    setCarouselIndex(Math.max(0, carouselIndex - 1))
   }
 
   function removeNew(idx: number) {
@@ -84,13 +95,7 @@ export function UploadMediaDialog({
       next.splice(idx, 1)
       return next
     })
-  }
-
-  function onDrop(e: React.DragEvent<HTMLDivElement>) {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragOver(false)
-    appendFiles(e.dataTransfer.files)
+    setCarouselIndex(Math.max(0, carouselIndex - 1))
   }
 
   async function handleConfirm() {
@@ -121,6 +126,11 @@ export function UploadMediaDialog({
 
   const totalCount = existing.length + newItems.length
   const canAddMore = totalCount < max
+  const allMedia = [
+    ...existing.map((p) => ({ url: p, type: "existing" })),
+    ...newItems.map((i) => ({ url: i.url, type: "new" })),
+  ]
+  const currentMedia = allMedia[carouselIndex] || null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -189,105 +199,101 @@ export function UploadMediaDialog({
 
         <div className="mt-4">
           <div className="text-sm font-medium mb-2">Mídias</div>
-          <div className="max-h-[50vh] overflow-auto">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {existing.map((p, idx) => {
-                const isVideo = !!p.toLowerCase().match(/\.(mp4|mov|webm)(\?|#|$)/i)
-                return (
-                  <div key={`ex-${idx}`} className="rounded border p-2 flex flex-col gap-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="truncate max-w-[150px]">{p}</div>
-                      <button
-                        type="button"
-                        className="text-red-600 hover:underline inline-flex items-center gap-1"
-                        onClick={() => {
-                          const next = existing.slice()
-                          const removed = next.splice(idx, 1)[0]
-                          if (removed && selectedCover === removed) {
-                            setSelectedCover(next[0] ?? null)
-                          }
-                          setExisting(next)
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        remover
-                      </button>
-                    </div>
-                    <div className="rounded bg-slate-50 p-1">
-                      {isVideo ? (
-                        <div className="text-[10px] text-center p-6">Vídeo</div>
-                      ) : (
-                        <img
-                          src={p || "/placeholder.svg?height=200&width=200&query=midia-existente"}
-                          alt="Mídia existente"
-                          className="w-full h-28 object-cover rounded"
-                          onError={(e) => {
-                            ;(e.currentTarget as HTMLImageElement).src = "/placeholder.svg?height=200&width=200"
-                          }}
-                        />
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedCover(p)}
-                      className={cn(
-                        "w-full text-xs rounded border px-2 py-1",
-                        selectedCover === p ? "border-emerald-600 text-emerald-700" : "border-slate-200",
-                      )}
-                      title="Definir como capa"
-                    >
-                      <div className="inline-flex items-center gap-1">
-                        <Crown className="h-3.5 w-3.5" />
-                        {selectedCover === p ? "Capa selecionada" : "Definir como capa"}
-                      </div>
-                    </button>
-                  </div>
-                )
-              })}
-              {newItems.map((it, idx) => (
-                <div key={`new-${idx}`} className="rounded border p-2 flex flex-col gap-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1">
-                      {it.kind === "image" ? (
+          <div className="relative">
+            <div className="flex items-center justify-between absolute z-10 top-1/2 left-0 right-0 -translate-y-1/2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn("bg-white/80 hover:bg-white", carouselIndex === 0 && "opacity-50 cursor-not-allowed")}
+                onClick={() => setCarouselIndex(Math.max(0, carouselIndex - 1))}
+                disabled={carouselIndex === 0}
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "bg-white/80 hover:bg-white",
+                  carouselIndex === allMedia.length - 1 && "opacity-50 cursor-not-allowed",
+                )}
+                onClick={() => setCarouselIndex(Math.min(allMedia.length - 1, carouselIndex + 1))}
+                disabled={carouselIndex === allMedia.length - 1}
+              >
+                <ChevronRight className="h-6 w-6" />
+              </Button>
+            </div>
+
+            {allMedia.length > 0 && currentMedia ? (
+              <div key={carouselIndex} className="rounded border p-2 flex flex-col gap-2">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1">
+                    {currentMedia.type === "new" ? (
+                      newItems[carouselIndex - existing.length]?.kind === "image" ? (
                         <ImageIcon className="h-3.5 w-3.5" />
-                      ) : it.kind === "video" ? (
+                      ) : (
                         <VideoIcon className="h-3.5 w-3.5" />
-                      ) : null}
-                      <span className="truncate max-w-[150px]">{it.file.name}</span>
-                    </div>
+                      )
+                    ) : null}
+                    <span className="truncate max-w-[150px]">
+                      {currentMedia.type === "existing"
+                        ? currentMedia.url
+                        : newItems[carouselIndex - existing.length]?.file.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
                     <button
                       type="button"
                       className="text-red-600 hover:underline inline-flex items-center gap-1"
                       onClick={() => {
-                        URL.revokeObjectURL(it.url)
-                        const next = newItems.slice()
-                        next.splice(idx, 1)
-                        setNewItems(next)
+                        if (currentMedia.type === "existing") removeExisting(carouselIndex)
+                        else removeNew(carouselIndex - existing.length)
                       }}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       remover
                     </button>
                   </div>
-                  <div className="rounded bg-slate-50 p-1">
-                    {it.kind === "video" ? (
-                      <video src={it.url} className="w-full h-28 object-contain rounded" muted />
-                    ) : it.kind === "image" ? (
-                      <img
-                        src={it.url || "/placeholder.svg?height=200&width=200&query=preview-da-midia-selecionada"}
-                        alt="Pré-visualização"
-                        className="w-full h-28 object-cover rounded"
-                        onError={(e) => {
-                          ;(e.currentTarget as HTMLImageElement).src = "/placeholder.svg?height=200&width=200"
-                        }}
-                      />
-                    ) : (
-                      <div className="text-xs text-muted-foreground">Arquivo</div>
-                    )}
-                  </div>
                 </div>
-              ))}
-            </div>
+                <div className="rounded bg-slate-50 p-1">
+                  {currentMedia.url.toLowerCase().match(/\.(mp4|mov|webm)(\?|#|$)/i) ? (
+                    <video
+                      src={publicUrlFromPath(currentMedia.url) || ""}
+                      className="w-full h-28 object-contain rounded"
+                      muted
+                    />
+                  ) : (
+                    <img
+                      src={
+                        publicUrlFromPath(currentMedia.url) ||
+                        "/placeholder.svg?height=200&width=200&query=midia-existente"
+                      }
+                      alt="Mídia"
+                      className="w-full h-28 object-cover rounded"
+                      onError={(e) => {
+                        ;(e.currentTarget as HTMLImageElement).src = "/placeholder.svg?height=200&width=200"
+                      }}
+                    />
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCover(currentMedia.url)}
+                  className={cn(
+                    "w-full text-xs rounded border px-2 py-1",
+                    selectedCover === currentMedia.url ? "border-emerald-600 text-emerald-700" : "border-slate-200",
+                  )}
+                  title="Definir como capa"
+                >
+                  <div className="inline-flex items-center gap-1">
+                    <Crown className="h-3.5 w-3.5" />
+                    {selectedCover === currentMedia.url ? "Capa selecionada" : "Definir como capa"}
+                  </div>
+                </button>
+              </div>
+            ) : (
+              <div className="rounded border p-6 text-center text-muted-foreground">Sem mídias para exibir.</div>
+            )}
           </div>
         </div>
 

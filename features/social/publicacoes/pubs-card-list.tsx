@@ -4,7 +4,17 @@ import * as React from "react"
 import type { Publicacao, Ideia, UserRole } from "@/lib/types"
 import { PlatformIcon } from "@/features/shared/platform-icon"
 import { StatusBadge } from "@/features/shared/status-badge"
-import { CalendarDays, MessageSquare, Pencil, Trash2, CheckCircle2, Upload, Maximize2 } from "lucide-react"
+import {
+  CalendarDays,
+  MessageSquare,
+  Pencil,
+  Trash2,
+  CheckCircle2,
+  Upload,
+  Maximize2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { bridge } from "@/lib/bridge"
@@ -41,7 +51,7 @@ export function PubsCardList({
   const [comments, setComments] = React.useState<Record<string, string>>({})
   const [showAllComments, setShowAllComments] = React.useState<Record<string, boolean>>({})
   const [uploadFor, setUploadFor] = React.useState<Publicacao | null>(null)
-  const [preview, setPreview] = React.useState<{ url: string; isVideo: boolean } | null>(null)
+  const [preview, setPreview] = React.useState<{ pub: Publicacao; index: number } | null>(null)
 
   const [delTarget, setDelTarget] = React.useState<Publicacao | null>(null)
   const [confirmStep, setConfirmStep] = React.useState<0 | 1 | 2>(0)
@@ -54,10 +64,11 @@ export function PubsCardList({
     setExpanded((e) => ({ ...e, [id]: !e[id] }))
   }
 
-  function computePreviewUrl(p: Publicacao) {
-    const candidates = [p.cover_url, p.midia_url, ...(p.midia_urls ?? [])].filter(Boolean) as string[]
-    const rel = candidates[0] || null
-    const url = publicUrlFromPath(rel)
+  function computePreviewUrl(p: Publicacao, index: number): { url: string; isVideo: boolean } | null {
+    const mediaPaths = p.midia_urls && p.midia_urls.length > 0 ? p.midia_urls : p.midia_url ? [p.midia_url] : []
+    if (mediaPaths.length === 0) return null
+    const path = mediaPaths[index] || ""
+    const url = publicUrlFromPath(path) || ""
     const isVideo = !!(url && url.toLowerCase().match(/\.(mp4|mov|webm)(\?|#|$)/i))
     return { url, isVideo }
   }
@@ -101,7 +112,10 @@ export function PubsCardList({
   }
 
   function MediaBox({ p }: { p: Publicacao }) {
-    const { url, isVideo } = computePreviewUrl(p)
+    const mediaPaths = p.midia_urls && p.midia_urls.length > 0 ? p.midia_urls : p.midia_url ? [p.midia_url] : []
+    const mediaCount = mediaPaths.length
+    const currentMedia = mediaPaths[0] || null
+    const { url, isVideo } = computePreviewUrl(p, 0) || { url: "", isVideo: false }
     const [broken, setBroken] = React.useState(false)
     const finalUrl = broken ? "/placeholder.svg?height=300&width=600" : url
 
@@ -113,7 +127,7 @@ export function PubsCardList({
             url ? "min-h-[200px]" : "bg-slate-50/60",
           )}
           onClick={() => {
-            if (url && !broken) setPreview({ url, isVideo })
+            if (url && !broken) setPreview({ pub: p, index: 0 })
           }}
           title={url && !broken ? "Clique para visualizar" : ""}
         >
@@ -137,9 +151,9 @@ export function PubsCardList({
             <div className="text-xs text-muted-foreground">Sem mídia</div>
           )}
         </div>
-        {p.midia_urls && p.midia_urls.length > 1 ? (
+        {mediaCount > 1 ? (
           <div className="mt-2 grid grid-cols-6 gap-1">
-            {p.midia_urls.slice(0, 10).map((path, i) => {
+            {mediaPaths.slice(0, 10).map((path, i) => {
               const u = publicUrlFromPath(path) || ""
               const vid = u.toLowerCase().match(/\.(mp4|mov|webm)(\?|#|$)/i)
               const thumbBroken = thumbBrokenStates[`${p.id}-${i}`] ?? false
@@ -147,7 +161,7 @@ export function PubsCardList({
                 <button
                   key={i}
                   className="rounded overflow-hidden border h-14 bg-white"
-                  onClick={() => setPreview({ url: thumbBroken ? "" : u, isVideo: !!vid })}
+                  onClick={() => setPreview({ pub: p, index: i })}
                   title="Visualizar"
                 >
                   {vid ? (
@@ -192,14 +206,14 @@ export function PubsCardList({
                   onClick={() => setUploadFor(p)}
                 >
                   <Upload className="h-4 w-4" />
-                  Upload/gerenciar mídias
+                  Editar mídia
                 </Button>
                 {url ? (
                   <Button
                     type="button"
                     variant="outline"
                     className="gap-2 bg-transparent"
-                    onClick={() => setPreview({ url, isVideo })}
+                    onClick={() => setPreview({ pub: p, index: 0 })}
                   >
                     <Maximize2 className="h-4 w-4" />
                     Visualizar
@@ -413,7 +427,7 @@ export function PubsCardList({
                         onUpdated(updated)
                         try {
                           const payload = buildPublicationUpdatePayload(updated)
-                          await bridge("publicacoes", "update", payload)
+                          await bridge("publicacoes", "approve", payload)
                         } catch {
                           onUpdated(p)
                         }
@@ -429,7 +443,7 @@ export function PubsCardList({
                         onUpdated(updated)
                         try {
                           const payload = buildPublicationUpdatePayload(updated, { comentario: comment })
-                          await bridge("publicacoes", "update", payload)
+                          await bridge("publicacoes", "reject", payload)
                         } catch {
                           onUpdated(p)
                         }
@@ -586,17 +600,59 @@ export function PubsCardList({
       {/* Visualização completa da mídia */}
       <Dialog open={!!preview} onOpenChange={(v) => !v && setPreview(null)}>
         <DialogContent className="max-w-4xl">
-          {preview?.isVideo ? (
-            <video src={preview.url} controls className="w-full max-h-[80vh] rounded object-contain" />
-          ) : (
-            <img
-              src={preview?.url || "/placeholder.svg?height=800&width=1200&query=midia-da-publicacao-em-detalhe"}
-              alt="Mídia"
-              className="w-full max-h-[80vh] rounded object-contain"
-              onError={(e) => {
-                ;(e.currentTarget as HTMLImageElement).src = "/placeholder.svg?height=800&width=1200"
-              }}
-            />
+          {preview && (
+            <div className="relative">
+              <div className="flex items-center justify-between absolute z-10 top-1/2 left-0 right-0 -translate-y-1/2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn("bg-white/80 hover:bg-white", preview.index === 0 && "opacity-50 cursor-not-allowed")}
+                  onClick={() => setPreview((prev) => prev && { ...prev, index: Math.max(0, prev.index - 1) })}
+                  disabled={preview.index === 0}
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "bg-white/80 hover:bg-white",
+                    preview.index === (preview.pub.midia_urls?.length ?? 1) - 1 && "opacity-50 cursor-not-allowed",
+                  )}
+                  onClick={() =>
+                    setPreview(
+                      (prev) =>
+                        prev && { ...prev, index: Math.min((prev.pub.midia_urls?.length ?? 1) - 1, prev.index + 1) },
+                    )
+                  }
+                  disabled={preview.index === (preview.pub.midia_urls?.length ?? 1) - 1}
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </Button>
+              </div>
+              <div className="w-full h-full">
+                {preview.pub.midia_urls && preview.pub.midia_urls.length > 0 ? (
+                  preview.pub.midia_urls[preview.index].toLowerCase().match(/\.(mp4|mov|webm)(\?|#|$)/i) ? (
+                    <video
+                      src={publicUrlFromPath(preview.pub.midia_urls[preview.index]) || ""}
+                      controls
+                      className="w-full h-full rounded object-contain"
+                    />
+                  ) : (
+                    <img
+                      src={
+                        publicUrlFromPath(preview.pub.midia_urls[preview.index]) ||
+                        "/placeholder.svg?height=300&width=600&query=preview-da-midia-da-publicacao"
+                      }
+                      alt="Mídia da publicação"
+                      className="w-full h-full rounded object-contain"
+                    />
+                  )
+                ) : (
+                  <div className="text-xs text-muted-foreground">Sem mídia</div>
+                )}
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
