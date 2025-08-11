@@ -427,7 +427,7 @@ export function PubsCardList({
                         onUpdated(updated)
                         try {
                           const payload = buildPublicationUpdatePayload(updated)
-                          await bridge("publicacoes", "approve", payload)
+                          await bridge("publicacoes", "update_aprovado", payload)
                         } catch {
                           onUpdated(p)
                         }
@@ -443,7 +443,7 @@ export function PubsCardList({
                         onUpdated(updated)
                         try {
                           const payload = buildPublicationUpdatePayload(updated, { comentario: comment })
-                          await bridge("publicacoes", "update", payload)
+                          await bridge("publicacoes", "update_reprovado", payload)
                         } catch {
                           onUpdated(p)
                         }
@@ -643,6 +643,7 @@ export function PubsCardList({
                       src={
                         publicUrlFromPath(preview.pub.midia_urls[preview.index]) ||
                         "/placeholder.svg?height=300&width=600&query=preview-da-midia-da-publicacao" ||
+                        "/placeholder.svg" ||
                         "/placeholder.svg"
                       }
                       alt="Mídia da publicação"
