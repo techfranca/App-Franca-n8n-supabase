@@ -23,6 +23,10 @@ export function publicUrlFromPath(
     return p
   }
 
+  if (p.startsWith("api/uploads/")) {
+    return `/${p}`
+  }
+
   // If the path already includes the public storage segment, prefer returning it with a leading slash.
   if (p.includes("storage/v1/object/public/") || p.includes("object/public/")) {
     return p.startsWith("/") ? p : `/${p}`
