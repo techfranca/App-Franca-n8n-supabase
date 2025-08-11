@@ -121,28 +121,28 @@ export function NewIdeaDialog({
       <DialogTrigger asChild>
         <Button className="bg-[#7de08d] text-[#081534] hover:bg-[#4b8655] font-sans">{triggerLabel}</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-7xl w-[90vw] max-h-[90vh] overflow-y-auto font-sans">
-        <DialogHeader className="pb-6">
-          <DialogTitle className="text-2xl font-semibold font-sans">Nova Ideia</DialogTitle>
+      <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto font-sans">
+        <DialogHeader className="pb-4">
+          <DialogTitle className="text-xl font-semibold font-sans">Nova Ideia</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Seção: Informações Básicas */}
-          <div className="border border-gray-200 p-6 rounded-lg space-y-6">
-            <h3 className="font-semibold text-lg text-gray-900 mb-4 font-sans">Informações Básicas</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-3">
+          <div className="border border-gray-200 p-4 rounded-lg space-y-4">
+            <h3 className="font-medium text-gray-900 mb-3 font-sans">Informações Básicas</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label className="text-sm font-medium font-sans">Cliente *</Label>
                 <Select
                   value={(data.cliente_id as string) || ""}
                   onValueChange={(v) => setData((d) => ({ ...d, cliente_id: v }))}
                 >
-                  <SelectTrigger className="h-11 font-sans text-base">
+                  <SelectTrigger className="h-11 font-sans text-sm">
                     <SelectValue placeholder="Selecione um cliente" className="font-sans" />
                   </SelectTrigger>
                   <SelectContent className="font-sans">
                     {clientes.map((c) => (
-                      <SelectItem key={c.id} value={c.id} className="font-sans text-base py-2">
+                      <SelectItem key={c.id} value={c.id} className="font-sans text-sm">
                         {c.nome}
                       </SelectItem>
                     ))}
@@ -150,10 +150,10 @@ export function NewIdeaDialog({
                 </Select>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Label className="text-sm font-medium font-sans">Título *</Label>
                 <Input
-                  className="h-11 font-sans text-base"
+                  className="h-11 font-sans text-sm"
                   value={data.titulo ?? ""}
                   onChange={(e) => setData((d) => ({ ...d, titulo: e.target.value }))}
                   placeholder="Digite o título da ideia"
@@ -161,19 +161,19 @@ export function NewIdeaDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
                 <Label className="text-sm font-medium font-sans">Plataforma</Label>
                 <Select
                   value={(data.plataforma as any) ?? "Instagram"}
                   onValueChange={(v) => setData((d) => ({ ...d, plataforma: v as any }))}
                 >
-                  <SelectTrigger className="h-11 font-sans text-base">
+                  <SelectTrigger className="h-11 font-sans text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="font-sans">
                     {plataformas.map((p) => (
-                      <SelectItem key={p} value={p} className="font-sans text-base py-2">
+                      <SelectItem key={p} value={p} className="font-sans text-sm">
                         {p}
                       </SelectItem>
                     ))}
@@ -181,18 +181,18 @@ export function NewIdeaDialog({
                 </Select>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Label className="text-sm font-medium font-sans">Formato</Label>
                 <Select
                   value={(data.formato as any) ?? "Reels"}
                   onValueChange={(v) => setData((d) => ({ ...d, formato: v as any }))}
                 >
-                  <SelectTrigger className="h-11 font-sans text-base">
+                  <SelectTrigger className="h-11 font-sans text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="font-sans">
                     {formatos.map((f) => (
-                      <SelectItem key={f} value={f} className="font-sans text-base py-2">
+                      <SelectItem key={f} value={f} className="font-sans text-sm">
                         {f}
                       </SelectItem>
                     ))}
@@ -200,10 +200,10 @@ export function NewIdeaDialog({
                 </Select>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Label className="text-sm font-medium font-sans">CTA</Label>
                 <Input
-                  className="h-11 font-sans text-base"
+                  className="h-11 font-sans text-sm"
                   value={data.cta ?? ""}
                   onChange={(e) => setData((d) => ({ ...d, cta: e.target.value }))}
                   placeholder="Call to action"
@@ -213,23 +213,23 @@ export function NewIdeaDialog({
           </div>
 
           {/* Seção: Conteúdo */}
-          <div className="border border-gray-200 p-6 rounded-lg space-y-6">
-            <h3 className="font-semibold text-lg text-gray-900 mb-4 font-sans">Conteúdo</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-3">
+          <div className="border border-gray-200 p-4 rounded-lg space-y-4">
+            <h3 className="font-medium text-gray-900 mb-3 font-sans">Conteúdo</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label className="text-sm font-medium font-sans">Ideia</Label>
                 <Textarea
-                  className="min-h-[120px] resize-none font-sans text-base leading-relaxed"
+                  className="min-h-[100px] resize-none font-sans text-sm"
                   value={data.ideia ?? ""}
                   onChange={(e) => setData((d) => ({ ...d, ideia: e.target.value }))}
                   placeholder="Descreva sua ideia..."
                 />
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Label className="text-sm font-medium font-sans">Legenda</Label>
                 <Textarea
-                  className="min-h-[120px] resize-none font-sans text-base leading-relaxed"
+                  className="min-h-[100px] resize-none font-sans text-sm"
                   value={data.legenda ?? ""}
                   onChange={(e) => setData((d) => ({ ...d, legenda: e.target.value }))}
                   placeholder="Escreva a legenda..."
@@ -238,10 +238,10 @@ export function NewIdeaDialog({
             </div>
 
             {data.formato === "Reels" && (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Label className="text-sm font-medium font-sans">Roteiro</Label>
                 <Textarea
-                  className="min-h-[100px] resize-none font-sans text-base leading-relaxed"
+                  className="min-h-[80px] resize-none font-sans text-sm"
                   value={data.roteiro ?? ""}
                   onChange={(e) => setData((d) => ({ ...d, roteiro: e.target.value }))}
                   placeholder="Descreva o roteiro do Reels..."
@@ -249,21 +249,21 @@ export function NewIdeaDialog({
               </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label className="text-sm font-medium font-sans">Hashtags</Label>
                 <Input
-                  className="h-11 font-sans text-base"
+                  className="h-11 font-sans text-sm"
                   value={data.hashtags ?? ""}
                   onChange={(e) => setData((d) => ({ ...d, hashtags: e.target.value }))}
                   placeholder="#hashtag1 #hashtag2"
                 />
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Label className="text-sm font-medium font-sans">Referência (URL)</Label>
                 <Input
-                  className="h-11 font-sans text-base"
+                  className="h-11 font-sans text-sm"
                   value={data.referencia ?? ""}
                   onChange={(e) => setData((d) => ({ ...d, referencia: e.target.value }))}
                   placeholder="https://exemplo.com"
@@ -271,10 +271,10 @@ export function NewIdeaDialog({
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               <Label className="text-sm font-medium font-sans">Objetivo</Label>
               <Textarea
-                className="min-h-[100px] resize-none font-sans text-base leading-relaxed"
+                className="min-h-[80px] resize-none font-sans text-sm"
                 value={data.objetivo ?? ""}
                 onChange={(e) => setData((d) => ({ ...d, objetivo: e.target.value }))}
                 placeholder="Qual o objetivo desta ideia?"
@@ -282,42 +282,41 @@ export function NewIdeaDialog({
             </div>
           </div>
 
-          {/* Seção: Agendamento */}
-          <div className="border border-gray-200 p-6 rounded-lg space-y-6">
-            <h3 className="font-semibold text-lg text-gray-900 mb-4 font-sans">Agendamento</h3>
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+          <div className="border border-gray-200 p-4 rounded-lg space-y-4">
+            <h3 className="font-medium text-gray-900 mb-3 font-sans">Agendamento</h3>
+            <div className="space-y-6">
               {/* Data de Aprovação */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <Label className="text-sm font-medium font-sans">Data e Hora de Aprovação</Label>
-                <div className="flex gap-3">
+                <div className="flex flex-col gap-3">
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         className={cn(
-                          "flex-1 justify-start text-left font-normal font-sans h-11 text-base min-w-[200px]",
+                          "w-full justify-start text-left font-normal font-sans text-sm h-11",
                           !dataAprovacao && "text-muted-foreground",
                         )}
                       >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
                         {dataAprovacao ? format(dataAprovacao, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start" side="bottom" sideOffset={8}>
+                    <PopoverContent className="w-auto p-0 z-50" align="start" side="bottom" sideOffset={8}>
                       <Calendar
                         mode="single"
                         selected={dataAprovacao}
                         onSelect={setDataAprovacao}
                         initialFocus
                         locale={ptBR}
-                        className="rounded-md border shadow-xl bg-white"
+                        className="rounded-md border shadow-lg bg-white"
                       />
                     </PopoverContent>
                   </Popover>
                   <div className="relative">
                     <Input
                       type="time"
-                      className="w-36 font-sans text-base h-11"
+                      className="w-full font-sans text-sm h-11 pr-10"
                       value={horaAprovacao}
                       onChange={(e) => setHoraAprovacao(e.target.value)}
                     />
@@ -327,37 +326,37 @@ export function NewIdeaDialog({
               </div>
 
               {/* Data de Postagem */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <Label className="text-sm font-medium font-sans">Data e Hora de Postagem</Label>
-                <div className="flex gap-3">
+                <div className="flex flex-col gap-3">
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         className={cn(
-                          "flex-1 justify-start text-left font-normal font-sans h-11 text-base min-w-[200px]",
+                          "w-full justify-start text-left font-normal font-sans text-sm h-11",
                           !dataPostagem && "text-muted-foreground",
                         )}
                       >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
                         {dataPostagem ? format(dataPostagem, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start" side="bottom" sideOffset={8}>
+                    <PopoverContent className="w-auto p-0 z-50" align="start" side="bottom" sideOffset={8}>
                       <Calendar
                         mode="single"
                         selected={dataPostagem}
                         onSelect={setDataPostagem}
                         initialFocus
                         locale={ptBR}
-                        className="rounded-md border shadow-xl bg-white"
+                        className="rounded-md border shadow-lg bg-white"
                       />
                     </PopoverContent>
                   </Popover>
                   <div className="relative">
                     <Input
                       type="time"
-                      className="w-36 font-sans text-base h-11"
+                      className="w-full font-sans text-sm h-11 pr-10"
                       value={horaPostagem}
                       onChange={(e) => setHoraPostagem(e.target.value)}
                     />
@@ -368,18 +367,17 @@ export function NewIdeaDialog({
             </div>
           </div>
 
-          {/* Seção: Botões */}
-          <div className="flex gap-4 justify-end pt-6 border-t border-gray-200">
+          <div className="flex gap-3 justify-end pt-4 border-t">
             <Button
               variant="outline"
               onClick={() => create("rascunho")}
               disabled={pending}
-              className="px-8 h-11 font-sans text-base"
+              className="px-6 font-sans text-sm"
             >
               {pending ? "Salvando..." : "Salvar rascunho"}
             </Button>
             <Button
-              className="bg-[#7de08d] text-[#081534] hover:bg-[#4b8655] px-8 h-11 font-sans text-base"
+              className="bg-[#7de08d] text-[#081534] hover:bg-[#4b8655] px-6 font-sans text-sm"
               onClick={() => create(isCliente ? "rascunho" : "ideia_em_aprovacao")}
               disabled={pending}
             >

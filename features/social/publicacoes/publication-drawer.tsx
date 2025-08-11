@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import type { Publicacao, Ideia, PublicacaoStatus } from "@/lib/types"
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,6 +18,11 @@ import { Upload } from "lucide-react"
 import { UploadMediaDialog } from "@/features/shared/upload-media-dialog"
 import { cn } from "@/lib/utils"
 import { publicUrlFromPath, uploadMediaFilesToSupabase } from "@/lib/supabase-client"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { CalendarIcon, Clock } from "lucide-react"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 const formatos = ["Reels", "Carrossel", "Imagem única", "Stories", "Outro"]
 const plataformas = ["Instagram", "Facebook", "TikTok", "YouTube", "LinkedIn"]
@@ -38,10 +43,22 @@ export function PublicationDrawer({ open, onOpenChange, pub, onUpdated }: Props)
   const [qa, setQa] = React.useState({ a: false, b: false, c: false })
   const [showUpload, setShowUpload] = React.useState(false)
 
+  const [dataAgendada, setDataAgendada] = React.useState<Date>()
+  const [horaAgendada, setHoraAgendada] = React.useState<string>("")
+
   React.useEffect(() => {
     setForm(pub)
     setQa({ a: false, b: false, c: false })
     setComment("")
+
+    if (pub?.data_agendada) {
+      const date = new Date(pub.data_agendada)
+      setDataAgendada(date)
+      setHoraAgendada(format(date, "HH:mm"))
+    } else {
+      setDataAgendada(undefined)
+      setHoraAgendada("")
+    }
   }, [pub])
 
   if (!form) return null
@@ -51,14 +68,23 @@ export function PublicationDrawer({ open, onOpenChange, pub, onUpdated }: Props)
 
   async function handleSave() {
     if (!form) return
-    const payload = buildPublicationUpdatePayload(form)
+
+    const dataAgendadaISO =
+      dataAgendada && horaAgendada
+        ? new Date(`${format(dataAgendada, "yyyy-MM-dd")}T${horaAgendada}:00`).toISOString()
+        : null
+
+    const updatedForm = { ...form, data_agendada: dataAgendadaISO }
+    setForm(updatedForm)
+
+    const payload = buildPublicationUpdatePayload(updatedForm)
     const res = await bridge<any, any>("publicacoes", "update", payload)
     if ((res as any)?.ok === false) {
       toast({ title: "Falha ao salvar", variant: "destructive" })
       return
     }
     toast({ title: "Publicação atualizada" })
-    onUpdated({ ...form })
+    onUpdated(updatedForm)
   }
 
   async function handleApprove() {
@@ -156,146 +182,56 @@ export function PublicationDrawer({ open, onOpenChange, pub, onUpdated }: Props)
 
   return (
     <>
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle className="flex items-center justify-between">
-              Publicação · {form.titulo}
-              <div className="flex gap-2">
-                <Button onClick={handleSave} className="bg-[#7de08d] text-[#081534] hover:bg-[#4b8655]">
-                  Salvar
-                </Button>
-                <Button variant="outline" onClick={handleApprove}>
-                  Aprovar
-                </Button>
-                <Button variant="outline" onClick={handleSchedule} disabled={!(qa.a && qa.b && qa.c)}>
-                  Agendada
-                </Button>
-                <Button variant="outline" onClick={handlePublish}>
-                  Publicado
-                </Button>
-                <Button variant="destructive" onClick={handleReject}>
-                  Reprovar
-                </Button>
-              </div>
-            </DrawerTitle>
-          </DrawerHeader>
-          <div className="p-4 grid gap-4 md:grid-cols-2">
-            <div className="grid gap-3">
-              <div className="grid gap-1.5">
-                <Label>Título</Label>
-                <Input value={form.titulo} onChange={(e) => set("titulo", e.target.value)} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-1.5">
-                  <Label>Plataforma</Label>
-                  <Select value={form.plataforma} onValueChange={(v) => set("plataforma", v as any)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {plataformas.map((p) => (
-                        <SelectItem key={p} value={p}>
-                          {p}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-1.5">
-                  <Label>Formato</Label>
-                  <Select value={form.formato} onValueChange={(v) => set("formato", v as any)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {formatos.map((f) => (
-                        <SelectItem key={f} value={f}>
-                          {f}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid gap-1.5">
-                <Label>Legenda</Label>
-                <Textarea value={form.legenda ?? ""} onChange={(e) => set("legenda", e.target.value)} />
-              </div>
-
-              <div className="grid gap-1.5">
-                <Label>Mídia</Label>
-                <div className="rounded border p-2 bg-slate-50">
-                  {!main ? (
-                    <div className="text-xs text-muted-foreground">Sem mídia</div>
-                  ) : isVideo ? (
-                    <video src={main || ""} controls className="w-full rounded object-contain max-h-[320px]" />
-                  ) : (
-                    <img
-                      src={
-                        main ||
-                        "/placeholder.svg?height=300&width=600&query=preview-da-midia-da-publicacao" ||
-                        "/placeholder.svg"
-                      }
-                      alt="Mídia da publicação"
-                      className="w-full rounded object-contain max-h-[320px]"
-                      onError={(e) => {
-                        ;(e.currentTarget as HTMLImageElement).src = "/placeholder.svg?height=300&width=600"
-                      }}
-                    />
-                  )}
-                  {thumbs.length > 0 && (
-                    <div className="mt-2 grid grid-cols-5 gap-1">
-                      {thumbs.slice(0, 10).map((u, i) => (
-                        <div key={i} className={cn("rounded overflow-hidden border")}>
-                          {u.toLowerCase().match(/\.(mp4|mov|webm)(\?|#|$)/i) ? (
-                            <div className="text-[10px] text-center p-2">Vídeo</div>
-                          ) : (
-                            <img
-                              src={u || "/placeholder.svg?height=80&width=80&query=miniatura-da-publicacao"}
-                              alt={`thumb-${i}`}
-                              className="w-full h-14 object-cover"
-                              onError={(e) => {
-                                ;(e.currentTarget as HTMLImageElement).src = "/placeholder.svg?height=80&width=80"
-                              }}
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="gap-2 bg-transparent"
-                    onClick={() => setShowUpload(true)}
-                  >
-                    <Upload className="h-4 w-4" />
-                    Upload/gerenciar mídias
-                  </Button>
-                  <span className="text-xs text-muted-foreground break-all">
-                    {form.cover_url ? `Capa: ${form.cover_url}` : "Sem capa definida"}
-                  </span>
-                </div>
-              </div>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-6xl w-[90vw] max-h-[90vh] overflow-y-auto font-sans">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-xl font-semibold font-sans mb-2">
+              Editar Publicação · {form.titulo}
+            </DialogTitle>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={handleSave}
+                className="bg-[#7de08d] text-[#081534] hover:bg-[#4b8655] font-sans text-sm px-4"
+              >
+                Salvar
+              </Button>
+              <Button variant="outline" onClick={handleApprove} className="font-sans text-sm px-4 bg-transparent">
+                Aprovar
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleSchedule}
+                disabled={!(qa.a && qa.b && qa.c)}
+                className="font-sans text-sm px-4 bg-transparent"
+              >
+                Agendada
+              </Button>
+              <Button variant="outline" onClick={handlePublish} className="font-sans text-sm px-4 bg-transparent">
+                Publicado
+              </Button>
+              <Button variant="destructive" onClick={handleReject} className="font-sans text-sm px-4">
+                Reprovar
+              </Button>
             </div>
+          </DialogHeader>
 
-            <div className="grid gap-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-1.5">
-                  <Label>Data/Hora Agendada</Label>
+          <div className="p-6 space-y-6">
+            {/* Seção: Informações Básicas */}
+            <div className="border border-gray-200 p-4 rounded-lg space-y-4">
+              <h3 className="font-medium text-gray-900 mb-3 font-sans">Informações Básicas</h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium font-sans">Título</Label>
                   <Input
-                    value={form.data_agendada ?? ""}
-                    onChange={(e) => set("data_agendada", e.target.value)}
-                    placeholder="YYYY-MM-DDTHH:mm:ssZ"
+                    className="h-11 font-sans text-sm w-full"
+                    value={form.titulo}
+                    onChange={(e) => set("titulo", e.target.value)}
                   />
                 </div>
-                <div className="grid gap-1.5">
-                  <Label>Link Publicado</Label>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium font-sans">Link Publicado</Label>
                   <Input
+                    className="h-11 font-sans text-sm w-full"
                     value={form.link_publicado ?? ""}
                     onChange={(e) => set("link_publicado", e.target.value)}
                     placeholder="https://..."
@@ -303,34 +239,186 @@ export function PublicationDrawer({ open, onOpenChange, pub, onUpdated }: Props)
                 </div>
               </div>
 
-              <div className="grid gap-1.5">
-                <Label>Comentário</Label>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium font-sans">Plataforma</Label>
+                  <Select value={form.plataforma} onValueChange={(v) => set("plataforma", v as any)}>
+                    <SelectTrigger className="h-11 font-sans text-sm w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="font-sans">
+                      {plataformas.map((p) => (
+                        <SelectItem key={p} value={p} className="font-sans text-sm">
+                          {p}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium font-sans">Formato</Label>
+                  <Select value={form.formato} onValueChange={(v) => set("formato", v as any)}>
+                    <SelectTrigger className="h-11 font-sans text-sm w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="font-sans">
+                      {formatos.map((f) => (
+                        <SelectItem key={f} value={f} className="font-sans text-sm">
+                          {f}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Seção: Conteúdo */}
+            <div className="border border-gray-200 p-4 rounded-lg space-y-4">
+              <h3 className="font-medium text-gray-900 mb-3 font-sans">Conteúdo</h3>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium font-sans">Legenda</Label>
+                  <Textarea
+                    className="min-h-[100px] resize-none font-sans text-sm w-full"
+                    value={form.legenda ?? ""}
+                    onChange={(e) => set("legenda", e.target.value)}
+                    placeholder="Escreva a legenda..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium font-sans">Mídia</Label>
+                  <div className="rounded border p-4 bg-slate-50">
+                    {!main ? (
+                      <div className="text-sm text-muted-foreground font-sans text-center py-8">Sem mídia</div>
+                    ) : isVideo ? (
+                      <video src={main || ""} controls className="w-full rounded object-contain max-h-[280px]" />
+                    ) : (
+                      <img
+                        src={main || "/placeholder.svg?height=300&width=600&query=preview-da-midia-da-publicacao"}
+                        alt="Mídia da publicação"
+                        className="w-full rounded object-contain max-h-[280px]"
+                        onError={(e) => {
+                          ;(e.currentTarget as HTMLImageElement).src = "/placeholder.svg?height=300&width=600"
+                        }}
+                      />
+                    )}
+                    {thumbs.length > 0 && (
+                      <div className="mt-4 grid grid-cols-5 gap-2">
+                        {thumbs.slice(0, 10).map((u, i) => (
+                          <div key={i} className={cn("rounded overflow-hidden border")}>
+                            {u.toLowerCase().match(/\.(mp4|mov|webm)(\?|#|$)/i) ? (
+                              <div className="text-xs text-center p-2 font-sans bg-gray-100">Vídeo</div>
+                            ) : (
+                              <img
+                                src={u || "/placeholder.svg?height=80&width=80&query=miniatura-da-publicacao"}
+                                alt={`thumb-${i}`}
+                                className="w-full h-14 object-cover"
+                                onError={(e) => {
+                                  ;(e.currentTarget as HTMLImageElement).src = "/placeholder.svg?height=80&width=80"
+                                }}
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="gap-2 font-sans text-sm h-11 bg-transparent"
+                      onClick={() => setShowUpload(true)}
+                    >
+                      <Upload className="h-4 w-4" />
+                      Editar mídia
+                    </Button>
+                    <span className="text-xs text-muted-foreground font-sans break-all">
+                      {form.cover_url ? `Capa: ${form.cover_url}` : "Sem capa definida"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Seção: Agendamento e QA */}
+            <div className="border border-gray-200 p-4 rounded-lg space-y-4">
+              <h3 className="font-medium text-gray-900 mb-3 font-sans">Agendamento e Qualidade</h3>
+
+              {/* Data Agendada */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium font-sans">Data e Hora Agendada</Label>
+                <div className="flex flex-col gap-3">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal font-sans text-sm h-11",
+                          !dataAgendada && "text-muted-foreground",
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                        {dataAgendada ? format(dataAgendada, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 z-50" align="start" side="bottom" sideOffset={8}>
+                      <Calendar
+                        mode="single"
+                        selected={dataAgendada}
+                        onSelect={setDataAgendada}
+                        initialFocus
+                        locale={ptBR}
+                        className="rounded-md border shadow-lg bg-white"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <div className="relative">
+                    <Input
+                      type="time"
+                      className="w-full font-sans text-sm h-11 pr-10"
+                      value={horaAgendada}
+                      onChange={(e) => setHoraAgendada(e.target.value)}
+                    />
+                    <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium font-sans">Comentário</Label>
                 <Textarea
+                  className="min-h-[80px] resize-none font-sans text-sm w-full"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   placeholder="Comentário (obrigatório para Reprovar)"
                 />
               </div>
 
-              <div className="grid gap-1">
-                <Label>Checklist antes de Agendar</Label>
-                <div className="flex items-center gap-2">
-                  <Checkbox checked={qa.a} onCheckedChange={(v) => setQa((q) => ({ ...q, a: Boolean(v) }))} /> Revisado
-                  por QA
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox checked={qa.b} onCheckedChange={(v) => setQa((q) => ({ ...q, b: Boolean(v) }))} /> CTA
-                  conferido
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox checked={qa.c} onCheckedChange={(v) => setQa((q) => ({ ...q, c: Boolean(v) }))} />{" "}
-                  Ortografia ok
+              <div className="space-y-3">
+                <Label className="text-sm font-medium font-sans">Checklist antes de Agendar</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox checked={qa.a} onCheckedChange={(v) => setQa((q) => ({ ...q, a: Boolean(v) }))} />
+                    <span className="font-sans text-sm">Revisado por QA</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox checked={qa.b} onCheckedChange={(v) => setQa((q) => ({ ...q, b: Boolean(v) }))} />
+                    <span className="font-sans text-sm">CTA conferido</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox checked={qa.c} onCheckedChange={(v) => setQa((q) => ({ ...q, c: Boolean(v) }))} />
+                    <span className="font-sans text-sm">Ortografia ok</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </DrawerContent>
-      </Drawer>
+        </DialogContent>
+      </Dialog>
 
       <UploadMediaDialog
         open={showUpload}
