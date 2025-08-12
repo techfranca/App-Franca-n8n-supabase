@@ -14,9 +14,14 @@ function normalizeKey(v?: unknown): string {
 // Trata "null"/"undefined" como vazio
 function normalizePath(v: unknown): string | null {
   const s = String(v ?? "").trim()
+  console.log("normalizePath debug:", { input: v, stringified: s })
+
   if (!s) return null
   const low = s.toLowerCase()
-  if (low === "null" || low === "undefined") return null
+  if (low === "null" || low === "undefined") {
+    console.log("normalizePath: treating as null:", { input: v, stringified: s, lowercase: low })
+    return null
+  }
   return s
 }
 
@@ -35,14 +40,24 @@ function parseArrayOrJSON(v: unknown): string[] {
 
 function parseComentarios(v: unknown): { autor: string; texto: string; created_at: string }[] {
   if (Array.isArray(v)) return v as any
-  if (typeof v === "string") {
+
+  if (typeof v === "string" && v.trim()) {
+    // Tenta fazer parse como JSON primeiro
     try {
       const parsed = JSON.parse(v)
       return Array.isArray(parsed) ? parsed : []
     } catch {
-      return []
+      // Se não for JSON válido, trata como string simples
+      return [
+        {
+          autor: "Cliente",
+          texto: v.trim(),
+          created_at: new Date().toISOString(),
+        },
+      ]
     }
   }
+
   return []
 }
 
@@ -84,6 +99,14 @@ export function normalizePublication(input: any, fallbackStatus: Publicacao["sta
   const legenda = input?.legenda ?? input?.caption ?? ""
 
   const primary = normalizePath(input?.midia_url ?? input?.midiaUrl ?? input?.media_url ?? input?.mediaUrl ?? null)
+
+  console.log("normalizePublication media debug:", {
+    midia_url: input?.midia_url,
+    midiaUrl: input?.midiaUrl,
+    media_url: input?.media_url,
+    mediaUrl: input?.mediaUrl,
+    primary: primary,
+  })
 
   const fromArray = parseArrayOrJSON(
     input?.midia_urls ?? input?.midiaUrls ?? input?.media_urls ?? input?.mediaUrls ?? null,

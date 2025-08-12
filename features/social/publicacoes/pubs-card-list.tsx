@@ -4,17 +4,7 @@ import * as React from "react"
 import type { Publicacao, Ideia, UserRole } from "@/lib/types"
 import { PlatformIcon } from "@/features/shared/platform-icon"
 import { StatusBadge } from "@/features/shared/status-badge"
-import {
-  CalendarDays,
-  MessageSquare,
-  Pencil,
-  Trash2,
-  CheckCircle2,
-  Upload,
-  Maximize2,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react"
+import { CalendarDays, MessageSquare, Pencil, Trash2, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { bridge } from "@/lib/bridge"
@@ -22,7 +12,14 @@ import { buildPublicationUpdatePayload } from "@/lib/build-payload"
 import { Textarea } from "@/components/ui/textarea"
 import { UploadMediaDialog } from "@/features/shared/upload-media-dialog"
 import { useToast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { publicUrlFromPath, uploadMediaFilesToSupabase } from "@/lib/supabase-client"
 
@@ -52,6 +49,8 @@ export function PubsCardList({
   const [showAllComments, setShowAllComments] = React.useState<Record<string, boolean>>({})
   const [uploadFor, setUploadFor] = React.useState<Publicacao | null>(null)
   const [preview, setPreview] = React.useState<{ pub: Publicacao; index: number } | null>(null)
+  const [ratingDialog, setRatingDialog] = React.useState<{ pub: Publicacao; comment: string } | null>(null)
+  const [selectedRating, setSelectedRating] = React.useState<number>(0)
 
   const [delTarget, setDelTarget] = React.useState<Publicacao | null>(null)
   const [confirmStep, setConfirmStep] = React.useState<0 | 1 | 2>(0)
@@ -65,10 +64,24 @@ export function PubsCardList({
   }
 
   function computePreviewUrl(p: Publicacao, index: number): { url: string; isVideo: boolean } | null {
+    // Debug: verificar dados recebidos
+    console.log("computePreviewUrl - Publicacao:", p.id, "midia_urls:", p.midia_urls, "midia_url:", p.midia_url)
+
     const mediaPaths = p.midia_urls && p.midia_urls.length > 0 ? p.midia_urls : p.midia_url ? [p.midia_url] : []
-    if (mediaPaths.length === 0) return null
+
+    console.log("computePreviewUrl - mediaPaths:", mediaPaths)
+
+    if (mediaPaths.length === 0) {
+      console.log("computePreviewUrl - Nenhuma mídia encontrada")
+      return null
+    }
+
     const path = mediaPaths[index] || ""
+    console.log("computePreviewUrl - path:", path)
+
     const url = publicUrlFromPath(path) || ""
+    console.log("computePreviewUrl - url gerada:", url)
+
     const isVideo = !!(url && url.toLowerCase().match(/\.(mp4|mov|webm)(\?|#|$)/i))
     return { url, isVideo }
   }
@@ -111,13 +124,51 @@ export function PubsCardList({
     }
   }
 
+  async function handleApprovalWithRating(pub: Publicacao, comment: string, rating: number) {
+    const comentarioObj = comment.trim()
+      ? [{ texto: comment.trim(), autor: "Cliente", created_at: new Date().toISOString() }]
+      : []
+    const updated: Publicacao = {
+      ...pub,
+      status: "aprovado",
+      comentarios: [...(pub.comentarios || []), ...comentarioObj],
+    }
+    onUpdated(updated)
+    try {
+      const payload = buildPublicationUpdatePayload(updated, {
+        comentario: comment.trim() || undefined,
+        nota: rating,
+      })
+      await bridge("publicacoes", "update_aprovado", payload)
+      toast({ title: "Publicação aprovada com sucesso!" })
+    } catch {
+      onUpdated(pub)
+      toast({ title: "Erro ao aprovar publicação", variant: "destructive" })
+    }
+  }
+
   function MediaBox({ p }: { p: Publicacao }) {
+    console.log("MediaBox - Publicacao:", p.id, "midia_urls:", p.midia_urls, "midia_url:", p.midia_url)
+
     const mediaPaths = p.midia_urls && p.midia_urls.length > 0 ? p.midia_urls : p.midia_url ? [p.midia_url] : []
     const mediaCount = mediaPaths.length
     const currentMedia = mediaPaths[0] || null
-    const { url, isVideo } = computePreviewUrl(p, 0) || { url: "", isVideo: false }
+
+    console.log("MediaBox - mediaPaths:", mediaPaths, "mediaCount:", mediaCount)
+
+    const previewResult = computePreviewUrl(p, 0)
+    const { url, isVideo } = previewResult || { url: "", isVideo: false }
+
+    console.log("MediaBox - previewResult:", previewResult)
+
     const [broken, setBroken] = React.useState(false)
+    const [retryCount, setRetryCount] = React.useState(0)
     const finalUrl = broken ? "/placeholder.svg?height=300&width=600" : url
+
+    const handleRetry = () => {
+      setBroken(false)
+      setRetryCount((prev) => prev + 1)
+    }
 
     return (
       <div className="mb-2">
@@ -134,21 +185,50 @@ export function PubsCardList({
           {url && !broken ? (
             isVideo ? (
               <video
+                key={`video-${retryCount}`}
                 src={finalUrl || ""}
                 controls
                 className="w-full max-h-[300px] rounded object-contain"
-                onError={() => setBroken(true)}
+                onError={() => {
+                  console.log("MediaBox - Erro ao carregar vídeo:", finalUrl)
+                  setBroken(true)
+                }}
               />
             ) : (
               <img
+                key={`img-${retryCount}`}
                 src={finalUrl || "/placeholder.svg?height=300&width=600&query=preview-da-midia-da-publicacao"}
                 alt="Mídia da publicação"
                 className="w-full max-h-[300px] rounded object-contain"
-                onError={() => setBroken(true)}
+                onError={() => {
+                  console.log("MediaBox - Erro ao carregar imagem:", finalUrl)
+                  setBroken(true)
+                }}
               />
             )
           ) : (
-            <div className="text-xs text-muted-foreground">Sem mídia</div>
+            <div className="text-xs text-muted-foreground text-center py-8">
+              {url ? (
+                <div className="space-y-2">
+                  <div>⚠️ Mídia temporariamente indisponível</div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleRetry()
+                    }}
+                    className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                  >
+                    Tentar novamente
+                  </button>
+                </div>
+              ) : (
+                "Sem mídia"
+              )}
+              {/* Debug info */}
+              <div className="text-[10px] mt-1 opacity-50">
+                Debug: urls={mediaPaths.length}, url="{url}", broken={broken.toString()}
+              </div>
+            </div>
           )}
         </div>
         {mediaCount > 1 ? (
@@ -171,7 +251,10 @@ export function PubsCardList({
                       src={thumbBroken ? "/placeholder.svg?height=80&width=80&query=miniatura-da-publicacao" : u}
                       alt={`thumb-${i}`}
                       className="w-full h-full object-cover"
-                      onError={() => setThumbBrokenStates((s) => ({ ...s, [`${p.id}-${i}`]: true }))}
+                      onError={() => {
+                        console.log("MediaBox - Erro ao carregar thumbnail:", u)
+                        setThumbBrokenStates((s) => ({ ...s, [`${p.id}-${i}`]: true }))
+                      }}
                     />
                   )}
                 </button>
@@ -179,50 +262,6 @@ export function PubsCardList({
             })}
           </div>
         ) : null}
-
-        {canManage && (
-          <div className="mt-2 flex items-center gap-2">
-            {p.status === "publicacao_em_alteracao" ? (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="gap-2 bg-transparent"
-                  onClick={() => setUploadFor(p)}
-                >
-                  <Upload className="h-4 w-4" />
-                  Substituir mídia
-                </Button>
-                <Button type="button" variant="outline" onClick={() => reopenForApproval(p)}>
-                  Enviar para o cliente aprovar
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="gap-2 bg-transparent"
-                  onClick={() => setUploadFor(p)}
-                >
-                  <Upload className="h-4 w-4" />
-                  Editar mídia
-                </Button>
-                {url ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="gap-2 bg-transparent"
-                    onClick={() => setPreview({ pub: p, index: 0 })}
-                  >
-                    <Maximize2 className="h-4 w-4" />
-                    Visualizar
-                  </Button>
-                ) : null}
-              </>
-            )}
-          </div>
-        )}
       </div>
     )
   }
@@ -309,7 +348,7 @@ export function PubsCardList({
 
               <MediaBox p={p} />
 
-              {canManage && comentariosCount > 0 ? (
+              {canManage || comentariosCount > 0 ? (
                 <div className="mb-2 rounded border bg-amber-50 p-2">
                   <div className="text-xs font-medium mb-1">Feedback do cliente</div>
                   {!showAll ? (
@@ -429,15 +468,9 @@ export function PubsCardList({
                   <div className="flex gap-2">
                     <Button
                       className="bg-[#7de08d] text-[#081534] hover:bg-[#4b8655]"
-                      onClick={async () => {
-                        const updated: Publicacao = { ...p, status: "aprovado" }
-                        onUpdated(updated)
-                        try {
-                          const payload = buildPublicationUpdatePayload(updated)
-                          await bridge("publicacoes", "update_aprovado", payload)
-                        } catch {
-                          onUpdated(p)
-                        }
+                      onClick={() => {
+                        setRatingDialog({ pub: p, comment })
+                        setSelectedRating(0)
                       }}
                     >
                       Aprovado
@@ -446,7 +479,16 @@ export function PubsCardList({
                       variant="destructive"
                       onClick={async () => {
                         if (!comment.trim()) return
-                        const updated: Publicacao = { ...p, status: "publicacao_em_alteracao" }
+                        const comentarioObj = {
+                          texto: comment.trim(),
+                          autor: "Cliente",
+                          created_at: new Date().toISOString(),
+                        }
+                        const updated: Publicacao = {
+                          ...p,
+                          status: "publicacao_em_alteracao",
+                          comentarios: [...(p.comentarios || []), comentarioObj],
+                        }
                         onUpdated(updated)
                         try {
                           const payload = buildPublicationUpdatePayload(updated, { comentario: comment })
@@ -666,6 +708,47 @@ export function PubsCardList({
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Rating dialog */}
+      <Dialog open={!!ratingDialog} onOpenChange={() => setRatingDialog(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Avalie esta publicação</DialogTitle>
+            <DialogDescription>Que nota você daria para esta publicação? (1 a 10)</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="grid grid-cols-5 gap-2 mb-4">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((rating) => (
+                <Button
+                  key={rating}
+                  variant={selectedRating === rating ? "default" : "outline"}
+                  className="aspect-square"
+                  onClick={() => setSelectedRating(rating)}
+                >
+                  {rating}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRatingDialog(null)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={selectedRating === 0}
+              onClick={async () => {
+                if (ratingDialog && selectedRating > 0) {
+                  await handleApprovalWithRating(ratingDialog.pub, ratingDialog.comment, selectedRating)
+                  setRatingDialog(null)
+                  setSelectedRating(0)
+                }
+              }}
+            >
+              Enviar Avaliação
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
