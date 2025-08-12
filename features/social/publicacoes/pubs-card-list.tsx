@@ -4,7 +4,17 @@ import * as React from "react"
 import type { Publicacao, Ideia, UserRole } from "@/lib/types"
 import { PlatformIcon } from "@/features/shared/platform-icon"
 import { StatusBadge } from "@/features/shared/status-badge"
-import { CalendarDays, MessageSquare, Pencil, Trash2, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react"
+import {
+  CalendarDays,
+  MessageSquare,
+  Pencil,
+  Trash2,
+  CheckCircle2,
+  Upload,
+  Maximize2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { bridge } from "@/lib/bridge"
@@ -64,25 +74,35 @@ export function PubsCardList({
   }
 
   function computePreviewUrl(p: Publicacao, index: number): { url: string; isVideo: boolean } | null {
-    // Debug: verificar dados recebidos
-    console.log("computePreviewUrl - Publicacao:", p.id, "midia_urls:", p.midia_urls, "midia_url:", p.midia_url)
+    console.log("=== DEBUG computePreviewUrl ===")
+    console.log("Publicacao ID:", p.id)
+    console.log("midia_urls:", p.midia_urls)
+    console.log("midia_url:", p.midia_url)
+    console.log("index:", index)
 
     const mediaPaths = p.midia_urls && p.midia_urls.length > 0 ? p.midia_urls : p.midia_url ? [p.midia_url] : []
-
-    console.log("computePreviewUrl - mediaPaths:", mediaPaths)
+    console.log("mediaPaths construído:", mediaPaths)
 
     if (mediaPaths.length === 0) {
-      console.log("computePreviewUrl - Nenhuma mídia encontrada")
+      console.log("❌ Nenhuma mídia encontrada - retornando null")
       return null
     }
 
     const path = mediaPaths[index] || ""
-    console.log("computePreviewUrl - path:", path)
+    console.log("path selecionado:", path)
+
+    if (!path) {
+      console.log("❌ Path vazio - retornando null")
+      return null
+    }
 
     const url = publicUrlFromPath(path) || ""
-    console.log("computePreviewUrl - url gerada:", url)
+    console.log("URL gerada pela publicUrlFromPath:", url)
 
     const isVideo = !!(url && url.toLowerCase().match(/\.(mp4|mov|webm)(\?|#|$)/i))
+    console.log("isVideo:", isVideo)
+    console.log("=== FIM DEBUG computePreviewUrl ===")
+
     return { url, isVideo }
   }
 
@@ -148,27 +168,26 @@ export function PubsCardList({
   }
 
   function MediaBox({ p }: { p: Publicacao }) {
-    console.log("MediaBox - Publicacao:", p.id, "midia_urls:", p.midia_urls, "midia_url:", p.midia_url)
+    console.log("=== DEBUG MediaBox ===")
+    console.log("Publicacao ID:", p.id)
+    console.log("midia_urls:", p.midia_urls)
+    console.log("midia_url:", p.midia_url)
 
     const mediaPaths = p.midia_urls && p.midia_urls.length > 0 ? p.midia_urls : p.midia_url ? [p.midia_url] : []
     const mediaCount = mediaPaths.length
-    const currentMedia = mediaPaths[0] || null
 
-    console.log("MediaBox - mediaPaths:", mediaPaths, "mediaCount:", mediaCount)
+    console.log("mediaPaths:", mediaPaths)
+    console.log("mediaCount:", mediaCount)
 
     const previewResult = computePreviewUrl(p, 0)
-    const { url, isVideo } = previewResult || { url: "", isVideo: false }
+    console.log("previewResult:", previewResult)
 
-    console.log("MediaBox - previewResult:", previewResult)
+    const { url, isVideo } = previewResult || { url: "", isVideo: false }
+    console.log("URL final:", url)
+    console.log("=== FIM DEBUG MediaBox ===")
 
     const [broken, setBroken] = React.useState(false)
-    const [retryCount, setRetryCount] = React.useState(0)
     const finalUrl = broken ? "/placeholder.svg?height=300&width=600" : url
-
-    const handleRetry = () => {
-      setBroken(false)
-      setRetryCount((prev) => prev + 1)
-    }
 
     return (
       <div className="mb-2">
@@ -185,48 +204,34 @@ export function PubsCardList({
           {url && !broken ? (
             isVideo ? (
               <video
-                key={`video-${retryCount}`}
                 src={finalUrl || ""}
                 controls
                 className="w-full max-h-[300px] rounded object-contain"
                 onError={() => {
-                  console.log("MediaBox - Erro ao carregar vídeo:", finalUrl)
+                  console.log("❌ Erro ao carregar vídeo:", finalUrl)
                   setBroken(true)
                 }}
               />
             ) : (
               <img
-                key={`img-${retryCount}`}
                 src={finalUrl || "/placeholder.svg?height=300&width=600&query=preview-da-midia-da-publicacao"}
                 alt="Mídia da publicação"
                 className="w-full max-h-[300px] rounded object-contain"
                 onError={() => {
-                  console.log("MediaBox - Erro ao carregar imagem:", finalUrl)
+                  console.log("❌ Erro ao carregar imagem:", finalUrl)
                   setBroken(true)
                 }}
               />
             )
           ) : (
-            <div className="text-xs text-muted-foreground text-center py-8">
-              {url ? (
-                <div className="space-y-2">
-                  <div>⚠️ Mídia temporariamente indisponível</div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleRetry()
-                    }}
-                    className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
-                  >
-                    Tentar novamente
-                  </button>
-                </div>
-              ) : (
-                "Sem mídia"
-              )}
-              {/* Debug info */}
-              <div className="text-[10px] mt-1 opacity-50">
-                Debug: urls={mediaPaths.length}, url="{url}", broken={broken.toString()}
+            <div className="text-xs text-muted-foreground">
+              Sem mídia detectada
+              <div className="text-[10px] mt-1 opacity-50 bg-red-50 p-1 rounded">
+                Debug: paths={mediaPaths.length}, url="{url}", broken={broken.toString()}
+                <br />
+                Raw midia_urls: {JSON.stringify(p.midia_urls)}
+                <br />
+                Raw midia_url: {JSON.stringify(p.midia_url)}
               </div>
             </div>
           )}
@@ -262,6 +267,50 @@ export function PubsCardList({
             })}
           </div>
         ) : null}
+
+        {canManage && (
+          <div className="mt-2 flex items-center gap-2">
+            {p.status === "publicacao_em_alteracao" ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2 bg-transparent"
+                  onClick={() => setUploadFor(p)}
+                >
+                  <Upload className="h-4 w-4" />
+                  Substituir mídia
+                </Button>
+                <Button type="button" variant="outline" onClick={() => reopenForApproval(p)}>
+                  Enviar para o cliente
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2 bg-transparent"
+                  onClick={() => setUploadFor(p)}
+                >
+                  <Upload className="h-4 w-4" />
+                  Editar mídia
+                </Button>
+                {url ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2 bg-transparent"
+                    onClick={() => setPreview({ pub: p, index: 0 })}
+                  >
+                    <Maximize2 className="h-4 w-4" />
+                    Visualizar
+                  </Button>
+                ) : null}
+              </>
+            )}
+          </div>
+        )}
       </div>
     )
   }

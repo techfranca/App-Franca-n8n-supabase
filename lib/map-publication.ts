@@ -13,15 +13,23 @@ function normalizeKey(v?: unknown): string {
 
 // Trata "null"/"undefined" como vazio
 function normalizePath(v: unknown): string | null {
-  const s = String(v ?? "").trim()
-  console.log("normalizePath debug:", { input: v, stringified: s })
+  console.log("normalizePath - input:", v, "type:", typeof v)
 
-  if (!s) return null
-  const low = s.toLowerCase()
-  if (low === "null" || low === "undefined") {
-    console.log("normalizePath: treating as null:", { input: v, stringified: s, lowercase: low })
+  const s = String(v ?? "").trim()
+  console.log("normalizePath - string:", s)
+
+  if (!s) {
+    console.log("normalizePath - empty string, returning null")
     return null
   }
+
+  const low = s.toLowerCase()
+  if (low === "null" || low === "undefined") {
+    console.log("normalizePath - found literal null/undefined string, returning null")
+    return null
+  }
+
+  console.log("normalizePath - returning:", s)
   return s
 }
 
@@ -90,6 +98,14 @@ function mapInboundPublicationStatus(raw: unknown, fallback: Publicacao["status"
 }
 
 export function normalizePublication(input: any, fallbackStatus: Publicacao["status"] = "em_design"): Publicacao {
+  console.log("normalizePublication - input:", {
+    id: input?.id,
+    midia_url: input?.midia_url,
+    midia_urls: input?.midia_urls,
+    midia_url1: input?.midia_url1,
+    midia_url2: input?.midia_url2,
+  })
+
   const id = String(input?.id ?? input?.pub_id ?? `pub_${Math.random().toString(36).slice(2)}`)
   const cliente_id = String(input?.cliente_id ?? input?.clienteId ?? "")
   const ideia_id = input?.ideia_id ?? input?.ideiaId ?? null
@@ -99,26 +115,30 @@ export function normalizePublication(input: any, fallbackStatus: Publicacao["sta
   const legenda = input?.legenda ?? input?.caption ?? ""
 
   const primary = normalizePath(input?.midia_url ?? input?.midiaUrl ?? input?.media_url ?? input?.mediaUrl ?? null)
-
-  console.log("normalizePublication media debug:", {
-    midia_url: input?.midia_url,
-    midiaUrl: input?.midiaUrl,
-    media_url: input?.media_url,
-    mediaUrl: input?.mediaUrl,
-    primary: primary,
-  })
+  console.log("normalizePublication - primary:", primary)
 
   const fromArray = parseArrayOrJSON(
     input?.midia_urls ?? input?.midiaUrls ?? input?.media_urls ?? input?.mediaUrls ?? null,
   )
     .map(normalizePath)
     .filter(Boolean) as string[]
+  console.log("normalizePublication - fromArray:", fromArray)
 
   const sequentials: string[] = []
   for (let i = 1; i <= 10; i++) {
-    const val = normalizePath(input?.[`midia_url${i}`])
-    if (val) sequentials.push(val)
+    const fieldName = `midia_url${i}`
+    const rawValue = input?.[fieldName]
+    console.log(`normalizePublication - ${fieldName}:`, rawValue, "type:", typeof rawValue)
+
+    const val = normalizePath(rawValue)
+    console.log(`normalizePublication - ${fieldName} normalized:`, val)
+
+    if (val) {
+      sequentials.push(val)
+      console.log(`normalizePublication - added ${fieldName} to sequentials:`, val)
+    }
   }
+  console.log("normalizePublication - sequentials final:", sequentials)
 
   const list = [primary, ...sequentials, ...fromArray].filter(Boolean) as string[]
   const seen = new Set<string>()
@@ -127,6 +147,8 @@ export function normalizePublication(input: any, fallbackStatus: Publicacao["sta
     seen.add(p)
     return true
   })
+
+  console.log("normalizePublication - final midia_urls:", midia_urls)
 
   const cover_url = normalizePath(input?.cover_url ?? input?.coverUrl ?? null)
   const status = mapInboundPublicationStatus(input?.status, fallbackStatus)
