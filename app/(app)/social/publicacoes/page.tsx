@@ -79,6 +79,12 @@ export default function PublicacoesPage() {
   const [open, setOpen] = React.useState(false)
   const [ideasById, setIdeasById] = React.useState<Record<string, Ideia>>({})
 
+  React.useEffect(() => {
+    if (user?.role === "cliente") {
+      setStatusFilter("publicacao_em_aprovacao")
+    }
+  }, [user?.role])
+
   const restrictedClientes = React.useMemo(() => {
     if (user?.role === "cliente" && user.cliente_id) {
       const myClient = clientes.find((c) => c.id === user.cliente_id)

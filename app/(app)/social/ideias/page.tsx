@@ -84,6 +84,12 @@ export default function IdeiasPage() {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(true)
 
+  React.useEffect(() => {
+    if (user?.role === "cliente") {
+      setStatusFilter("ideia_em_aprovacao")
+    }
+  }, [user?.role])
+
   const clienteIdForFetch = user?.role === "cliente" ? user.cliente_id : (cliente?.id ?? null)
 
   const refetch = React.useCallback(async () => {
