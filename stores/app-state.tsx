@@ -2,7 +2,7 @@
 import { createContext, useContext, useMemo, useState, useEffect } from "react"
 import type React from "react"
 import type { Cliente, AuthUser } from "@/lib/types"
-import { getSupabaseBrowserClient } from "@/lib/supabase-client" // Importamos o cliente Supabase
+import { TODOS_OS_CLIENTES } from "@/lib/database" // Importa a lista de clientes
 
 type Periodo = { month: number; year: number }
 type AppState = {
@@ -10,7 +10,7 @@ type AppState = {
   setUser: (user: AuthUser | null) => void
   cliente: Cliente | null
   setCliente: (c: Cliente | null) => void
-  clientes: Cliente[] // A lista de clientes agora virá do Supabase
+  clientes: Cliente[]
   periodo: Periodo
   setPeriodo: (p: Periodo) => void
   search: string
@@ -24,32 +24,12 @@ const DEFAULT_PERIODO: Periodo = { month: new Date().getMonth() + 1, year: new D
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [cliente, setCliente] = useState<Cliente | null>(null)
-  const [clientes, setClientes] = useState<Cliente[]>([]) // Estado para a lista de clientes
   const [periodo, setPeriodo] = useState<Periodo>(DEFAULT_PERIODO)
   const [search, setSearch] = useState("")
 
-  // --- MUDANÇA PRINCIPAL AQUI ---
-  // Hook para buscar os clientes do Supabase quando a aplicação carregar
-  useEffect(() => {
-    async function fetchClientes() {
-      const supabase = getSupabaseBrowserClient()
-      if (!supabase) return
-
-      // Busca 'id' e 'nome' da sua tabela 'clientes'
-      const { data, error } = await supabase.from('clientes').select('id, nome')
-      
-      if (error) {
-        console.error("Erro ao buscar clientes:", error)
-        return
-      }
-      setClientes(data as Cliente[])
-    }
-    fetchClientes()
-  }, []) // O array vazio [] garante que isso só rode uma vez
-
   const value = useMemo(
-    () => ({ user, setUser, cliente, setCliente, clientes, periodo, setPeriodo, search, setSearch }),
-    [user, cliente, clientes, periodo, search],
+    () => ({ user, setUser, cliente, setCliente, clientes: TODOS_OS_CLIENTES, periodo, setPeriodo, search, setSearch }),
+    [user, cliente, periodo, search],
   )
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>
 }
@@ -60,7 +40,7 @@ export function useAppState() {
   return ctx
 }
 
-// A função useClientes agora simplesmente consome o estado que já foi buscado.
+// Esta função agora é mais simples
 export function useClientes() {
     const { clientes } = useAppState();
     return clientes;

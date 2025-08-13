@@ -1,0 +1,177 @@
+// lib/database.ts
+
+import type { AuthUser, Cliente } from "./types";
+
+// --- 1. LISTA DE TODOS OS SEUS CLIENTES ---
+// O 'id' deve ser único para cada cliente.
+export const TODOS_OS_CLIENTES: Cliente[] = [
+  { id: "cli_auramar", nome: "Auramar" },
+  { id: "cli_caminho_do_surf", nome: "Caminho do Surf" },
+  { id: "cli_grupo_pegazus", nome: "Grupo Pegazus" },
+  { id: "cli_mare_aquariana", nome: "Maré Aquariana" },
+  { id: "cli_allysson_valadao", nome: "Allysson Valadão" },
+  { id: "cli_3haus", nome: "3Haus" },
+  { id: "cli_voe_mais", nome: "Voe Mais" },
+  { id: "cli_alessandro_santos", nome: "Alessandro Santos" },
+  { id: "cli_ana_moura", nome: "Ana Moura" },
+  { id: "cli_bistro_de_rua", nome: "Bistrô de Rua" },
+  { id: "cli_fox_gnv", nome: "Fox GNV" },
+  { id: "cli_posto_13", nome: "Posto 13" },
+  { id: "cli_feldhaus_cake", nome: "FeldHaus Cake" },
+  { id: "cli_cara_de_cao", nome: "Cara de Cão" },
+  { id: "cli_ethiene", nome: "Ethiene" },
+  { id: "cli_bluepack", nome: "BluePack" },
+  { id: "cli_relojoaria_jj", nome: "Relojoaria JJ" },
+];
+
+
+// --- 2. LISTA DE TODOS OS USUÁRIOS DO SISTEMA ---
+// Esta lista substitui a autenticação e a tabela 'profiles' do Supabase.
+export const TODOS_OS_USUARIOS: AuthUser[] = [
+  // Administrador
+  {
+    id: "user_gabriel",
+    email: "gabriel",
+    password: "gabriel123", // Lembre-se que senhas em texto plano não é seguro
+    name: "Gabriel (administrador)",
+    role: "admin",
+    cliente_id: null, // Admin não tem cliente_id
+  },
+  // Clientes Comuns
+  {
+    id: "user_auramar",
+    email: "auramar",
+    password: "auramar123",
+    name: "Auramar",
+    role: "cliente",
+    cliente_id: "cli_auramar", // O 'cliente_id' DEVE CORRESPONDER ao ID da lista de clientes acima
+  },
+  {
+    id: "user_caminho_do_surf",
+    email: "caminhodosurf",
+    password: "caminhodosurf123",
+    name: "Caminho do Surf",
+    role: "cliente",
+    cliente_id: "cli_caminho_do_surf",
+  },
+  {
+    id: "user_grupo_pegazus",
+    email: "grupopegazus",
+    password: "grupopegazus123",
+    name: "Grupo Pegazus",
+    role: "cliente",
+    cliente_id: "cli_grupo_pegazus",
+  },
+  {
+    id: "user_mare_aquariana",
+    email: "mareaquariana",
+    password: "mareaquariana123",
+    name: "Maré Aquariana",
+    role: "cliente",
+    cliente_id: "cli_mare_aquariana",
+  },
+  {
+    id: "user_allysson_valadao",
+    email: "allyssonvaladao",
+    password: "allyssonvaladao123",
+    name: "Allysson Valadão",
+    role: "cliente",
+    cliente_id: "cli_allysson_valadao",
+  },
+  {
+    id: "user_3haus",
+    email: "3haus",
+    password: "3haus123",
+    name: "3Haus",
+    role: "cliente",
+    cliente_id: "cli_3haus",
+  },
+  {
+    id: "user_voe_mais",
+    email: "voemais",
+    password: "voemais123",
+    name: "Voe Mais",
+    role: "cliente",
+    cliente_id: "cli_voe_mais",
+  },
+   {
+    id: "user_alessandro_santos",
+    email: "alessandrosantos",
+    password: "alessandrosantos123",
+    name: "Alessandro Santos",
+    role: "cliente",
+    cliente_id: "cli_alessandro_santos",
+  },
+  {
+    id: "user_ana_moura",
+    email: "anamoura",
+    password: "anamoura123",
+    name: "Ana Moura",
+    role: "cliente",
+    cliente_id: "cli_ana_moura",
+  },
+  {
+    id: "user_bistro_de_rua",
+    email: "bistrodrua",
+    password: "bistrodrua123",
+    name: "Bistrô de Rua",
+    role: "cliente",
+    cliente_id: "cli_bistro_de_rua",
+  },
+  {
+    id: "user_fox_gnv",
+    email: "foxgnv",
+    password: "foxgnv123",
+    name: "Fox GNV",
+    role: "cliente",
+    cliente_id: "cli_fox_gnv",
+  },
+  {
+    id: "user_posto_13",
+    email: "posto13",
+    password: "posto13123",
+    name: "Posto 13",
+    role: "cliente",
+    cliente_id: "cli_posto_13",
+  },
+  {
+    id: "user_feldhaus_cake",
+    email: "feldhauscake",
+    password: "feldhauscake123",
+    name: "FeldHaus Cake",
+    role: "cliente",
+    cliente_id: "cli_feldhaus_cake",
+  },
+  {
+    id: "user_cara_de_cao",
+    email: "caradecao",
+    password: "caradecao123",
+    name: "Cara de Cão",
+    role: "cliente",
+    cliente_id: "cli_cara_de_cao",
+  },
+  {
+    id: "user_ethiene",
+    email: "ethiene",
+    password: "ethiene123",
+    name: "Ethiene",
+    role: "cliente",
+    cliente_id: "cli_ethiene",
+  },
+  {
+    id: "user_bluepack",
+    email: "bluepack",
+    password: "bluepack123",
+    name: "BluePack",
+    role: "cliente",
+    cliente_id: "cli_bluepack",
+  },
+  {
+    id: "user_relojoaria_jj",
+    email: "relojoariajj",
+    password: "relojoariajj123",
+    name: "Relojoaria JJ",
+    role: "cliente",
+    cliente_id: "cli_relojoaria_jj",
+  },
+];
