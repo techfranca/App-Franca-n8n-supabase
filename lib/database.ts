@@ -1,6 +1,4 @@
-// lib/database.ts
-
-import type { AuthUser, Cliente } from "./types";
+import type { AuthUser, Cliente } from "./types"
 
 // --- 1. LISTA DE TODOS OS SEUS CLIENTES ---
 // O 'id' deve ser único para cada cliente.
@@ -22,8 +20,9 @@ export const TODOS_OS_CLIENTES: Cliente[] = [
   { id: "cli_ethiene", nome: "Ethiene" },
   { id: "cli_bluepack", nome: "BluePack" },
   { id: "cli_relojoaria_jj", nome: "Relojoaria JJ" },
-];
-
+  { id: "cli_uhkas", nome: "Uhkas" },
+  { id: "cli_beergam", nome: "Beergam" },
+]
 
 // --- 2. LISTA DE TODOS OS USUÁRIOS DO SISTEMA ---
 // Esta lista substitui a autenticação e a tabela 'profiles' do Supabase.
@@ -94,7 +93,7 @@ export const TODOS_OS_USUARIOS: AuthUser[] = [
     role: "cliente",
     cliente_id: "cli_voe_mais",
   },
-   {
+  {
     id: "user_alessandro_santos",
     email: "alessandrosantos",
     password: "alessandrosantos123",
@@ -174,4 +173,20 @@ export const TODOS_OS_USUARIOS: AuthUser[] = [
     role: "cliente",
     cliente_id: "cli_relojoaria_jj",
   },
-];
+  {
+    id: "user_uhkas",
+    email: "uhkas",
+    password: "uhkas123",
+    name: "Uhkas",
+    role: "cliente",
+    cliente_id: "cli_uhkas",
+  },
+  {
+    id: "user_beergam",
+    email: "beergam",
+    password: "beergam123",
+    name: "Beergam",
+    role: "cliente",
+    cliente_id: "cli_beergam",
+  },
+]
