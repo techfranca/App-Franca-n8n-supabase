@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input"
 import { bridge } from "@/lib/bridge"
 import { CarrosselPreview } from "./carrossel-preview"
 import { CarrosselModal } from "./carrossel-modal"
+import { TextModal } from "./text-modal"
 
 export function IdeasCardList({
   items,
@@ -36,10 +37,22 @@ export function IdeasCardList({
 }) {
   const [comments, setComments] = React.useState<Record<string, string>>({})
   const [showAllComments, setShowAllComments] = React.useState<Record<string, boolean>>({})
+
   const [carrosselModal, setCarrosselModal] = React.useState<{ aberto: boolean; ideiaId: string | null }>({
     aberto: false,
     ideiaId: null,
   })
+
+  const [textModal, setTextModal] = React.useState<{
+    aberto: boolean
+    titulo: string
+    conteudo: string
+  }>({
+    aberto: false,
+    titulo: "",
+    conteudo: "",
+  })
+
   const { toast } = useToast()
 
   const isClient = role === "cliente"
@@ -68,11 +81,23 @@ export function IdeasCardList({
     setCarrosselModal({ aberto: true, ideiaId })
   }
 
+  const handleVerTudoTexto = (titulo: string, conteudo: string) => {
+    setTextModal({ aberto: true, titulo, conteudo })
+  }
+
   const handleFecharCarrosselModal = () => {
     setCarrosselModal({ aberto: false, ideiaId: null })
   }
 
+  const handleFecharTextModal = () => {
+    setTextModal({ aberto: false, titulo: "", conteudo: "" })
+  }
+
   const ideiaCarrosselModal = carrosselModal.ideiaId ? filteredItems.find((i) => i.id === carrosselModal.ideiaId) : null
+
+  const shouldShowVerTudo = (texto: string) => {
+    return texto && texto.trim().length > 100
+  }
 
   return (
     <>
@@ -139,8 +164,22 @@ export function IdeasCardList({
                 {i.formato === "Carrossel" ? (
                   <CarrosselPreview textoCompleto={i.ideia || ""} onVerTudo={() => handleVerTudoCarrossel(i.id)} />
                 ) : (
-                  <div className="text-muted-foreground font-bold max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
-                    {i.ideia || "—"}
+                  <div className="space-y-2">
+                    <div className="text-muted-foreground font-bold max-w-full overflow-x-hidden whitespace-pre-wrap break-words overflow-wrap-break-word">
+                      {shouldShowVerTudo(i.ideia || "") ? (i.ideia || "").substring(0, 180) + "..." : i.ideia || "—"}
+                    </div>
+                    {shouldShowVerTudo(i.ideia || "") && (
+                      <div className="flex justify-end">
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={() => handleVerTudoTexto("Conteúdo completo", i.ideia || "")}
+                          className="text-[#4b8655] p-0 h-auto text-xs"
+                        >
+                          Ver tudo
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -148,21 +187,47 @@ export function IdeasCardList({
               {i.formato === "Reels" && i.roteiro ? (
                 <div className="text-sm mb-2">
                   <div className="font-medium">Roteiro</div>
-                  <div className="text-muted-foreground max-w-full overflow-x-hidden whitespace-pre-wrap break-words font-bold">
-                    {i.roteiro}
+                  <div className="space-y-2">
+                    <div className="text-muted-foreground max-w-full overflow-x-hidden whitespace-pre-wrap break-words overflow-wrap-break-word font-bold">
+                      {shouldShowVerTudo(i.roteiro) ? i.roteiro.substring(0, 180) + "..." : i.roteiro}
+                    </div>
+                    {shouldShowVerTudo(i.roteiro) && (
+                      <div className="flex justify-end">
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={() => handleVerTudoTexto("Roteiro completo", i.roteiro)}
+                          className="text-[#4b8655] p-0 h-auto text-xs"
+                        >
+                          Ver tudo
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : null}
 
               <div className="text-sm mb-2">
                 <div className="font-medium">Legenda</div>
-                {i.formato === "Carrossel" ? (
-                  <CarrosselPreview textoCompleto={i.legenda || ""} onVerTudo={() => handleVerTudoCarrossel(i.id)} />
-                ) : (
-                  <div className="text-muted-foreground font-bold max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
-                    {i.legenda || "—"}
+                <div className="space-y-2">
+                  <div className="text-muted-foreground font-bold max-w-full overflow-x-hidden whitespace-pre-wrap break-words overflow-wrap-break-word">
+                    {shouldShowVerTudo(i.legenda || "")
+                      ? (i.legenda || "").substring(0, 180) + "..."
+                      : i.legenda || "—"}
                   </div>
-                )}
+                  {shouldShowVerTudo(i.legenda || "") && (
+                    <div className="flex justify-end">
+                      <Button
+                        variant="link"
+                        size="sm"
+                        onClick={() => handleVerTudoTexto("Legenda completa", i.legenda || "")}
+                        className="text-[#4b8655] p-0 h-auto text-xs"
+                      >
+                        Ver tudo
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {canSeeComments && comentariosCount > 0 ? (
@@ -177,7 +242,7 @@ export function IdeasCardList({
                             : ""}
                         </span>
                       </div>
-                      <div className="max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
+                      <div className="max-w-full overflow-x-hidden whitespace-pre-wrap break-words overflow-wrap-break-word">
                         {lastComment?.texto || ""}
                       </div>
                       {comentariosCount > 1 ? (
@@ -200,7 +265,7 @@ export function IdeasCardList({
                             <span className="font-medium">{c.autor || "Comentário"}</span>{" "}
                             <span>{c.created_at ? "— " + new Date(c.created_at).toLocaleString("pt-BR") : ""}</span>
                           </div>
-                          <div className="max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
+                          <div className="max-w-full overflow-x-hidden whitespace-pre-wrap break-words overflow-wrap-break-word">
                             {c.texto || ""}
                           </div>
                         </div>
@@ -235,7 +300,7 @@ export function IdeasCardList({
                       href={String(i.referencia)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[#4b8655] underline max-w-full overflow-x-hidden break-all"
+                      className="text-[#4b8655] underline max-w-full overflow-x-hidden break-all overflow-wrap-break-word"
                     >
                       {String(i.referencia)}
                     </a>
@@ -292,10 +357,17 @@ export function IdeasCardList({
       {ideiaCarrosselModal && (
         <CarrosselModal
           aberto={carrosselModal.aberto}
-          textoCompleto={ideiaCarrosselModal.ideia || ideiaCarrosselModal.legenda || ""}
+          textoCompleto={ideiaCarrosselModal.ideia || ""}
           onClose={handleFecharCarrosselModal}
         />
       )}
+
+      <TextModal
+        aberto={textModal.aberto}
+        titulo={textModal.titulo}
+        conteudo={textModal.conteudo}
+        onClose={handleFecharTextModal}
+      />
 
       <Dialog
         open={!!delTarget && confirmStep === 1}

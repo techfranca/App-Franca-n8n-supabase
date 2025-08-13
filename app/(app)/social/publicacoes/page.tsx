@@ -3,7 +3,7 @@
 import * as React from "react"
 import { PageShell } from "@/components/page-shell"
 import { useAppState, useClientes } from "@/stores/app-state"
-import type { Publicacao, Ideia, Formato, Plataforma } from "@/lib/types"
+import type { Publicacao, Ideia, Formato, Plataforma, PublicacaoStatus } from "@/lib/types"
 import { PubsCardList } from "@/features/social/publicacoes/pubs-card-list"
 import { PublicationDrawer } from "@/features/social/publicacoes/publication-drawer"
 import { bridge } from "@/lib/bridge"
@@ -24,6 +24,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const formatos: Formato[] = ["Reels", "Carrossel", "Imagem única", "Stories", "Outro"]
 const plataformas: Plataforma[] = ["Instagram", "Facebook", "TikTok", "YouTube", "LinkedIn"]
+
+const statusOptions: { value: PublicacaoStatus | "todos"; label: string }[] = [
+  { value: "todos", label: "Todos os status" },
+  { value: "em_design", label: "Em Design" },
+  { value: "publicacao_em_aprovacao", label: "Em Aprovação" },
+  { value: "publicacao_em_alteracao", label: "Em Alteração" },
+  { value: "aprovado", label: "Aprovado" },
+  { value: "agendada", label: "Agendada" },
+  { value: "publicada", label: "Publicada" },
+]
 
 function MonthPicker({
   value,
@@ -64,6 +74,7 @@ export default function PublicacoesPage() {
   const [localFilter, setLocalFilter] = React.useState("")
   const [formatoFilter, setFormatoFilter] = React.useState<string>("todos")
   const [plataformaFilter, setPlataformaFilter] = React.useState<string>("todos")
+  const [statusFilter, setStatusFilter] = React.useState<string>("todos")
   const [sel, setSel] = React.useState<Publicacao | null>(null)
   const [open, setOpen] = React.useState(false)
   const [ideasById, setIdeasById] = React.useState<Record<string, Ideia>>({})
@@ -79,15 +90,7 @@ export default function PublicacoesPage() {
   const refetch = React.useCallback(async () => {
     const clienteIdForFetch = user?.role === "cliente" ? user.cliente_id : (cliente?.id ?? null)
 
-    console.log("DEBUG FILTRO PUBLICAÇÕES:", {
-      userRole: user?.role,
-      userClienteId: user?.cliente_id,
-      clienteIdForFetch,
-      clienteNome: cliente?.nome,
-    })
-
     if (user?.role === "cliente" && !clienteIdForFetch) {
-      console.log("DEBUG: Cliente sem cliente_id, retornando array vazio")
       setItems([])
       setLoading(false)
       return
@@ -100,15 +103,9 @@ export default function PublicacoesPage() {
         periodo,
       })
 
-      console.log("DEBUG: Dados retornados do backend:", data)
-
       const list = normalizePublicationsList(data)
-
-      console.log("DEBUG: Dados normalizados:", list)
-
       setItems(list)
     } catch (err: any) {
-      console.log("DEBUG: Erro ao carregar publicações:", err)
       setItems([])
       toast({
         title: "Erro ao carregar publicações",
@@ -150,6 +147,18 @@ export default function PublicacoesPage() {
   const filtered = React.useMemo(() => {
     let result = items
 
+    if (canUseAdvancedFilters && cliente?.id) {
+      result = result.filter((p) => p.cliente_id === cliente.id)
+    }
+
+    if (periodo) {
+      result = result.filter((p) => {
+        if (!p.data_postagem) return false // Só mostra itens com data de postagem definida
+        const itemDate = new Date(p.data_postagem)
+        return itemDate.getMonth() + 1 === periodo.month && itemDate.getFullYear() === periodo.year
+      })
+    }
+
     // Filtro de busca por texto
     const q = localFilter.toLowerCase().trim()
     if (q) {
@@ -164,8 +173,12 @@ export default function PublicacoesPage() {
       result = result.filter((p) => p.plataforma === plataformaFilter)
     }
 
+    if (statusFilter !== "todos") {
+      result = result.filter((p) => p.status === statusFilter)
+    }
+
     return result
-  }, [items, localFilter, formatoFilter, plataformaFilter])
+  }, [items, localFilter, formatoFilter, plataformaFilter, statusFilter, cliente, periodo, canUseAdvancedFilters])
 
   function onEdit(row: Publicacao) {
     setSel(row)
@@ -224,6 +237,18 @@ export default function PublicacoesPage() {
           placeholder="Busca (título / legenda)..."
           className="max-w-xs"
         />
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            {statusOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {canUseAdvancedFilters && (
           <>
             <Select value={formatoFilter} onValueChange={setFormatoFilter}>

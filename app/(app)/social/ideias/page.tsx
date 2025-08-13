@@ -3,7 +3,7 @@
 import * as React from "react"
 import { PageShell } from "@/components/page-shell"
 import { useAppState, useClientes } from "@/stores/app-state"
-import type { Ideia, Formato, Plataforma } from "@/lib/types"
+import type { Ideia, Formato, Plataforma, IdeiaStatus } from "@/lib/types"
 import { IdeaDrawer } from "@/features/social/ideias/idea-drawer"
 import { NewIdeaDialog } from "@/features/social/ideias/new-idea-dialog"
 import { useToast } from "@/hooks/use-toast"
@@ -24,6 +24,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const formatos: Formato[] = ["Reels", "Carrossel", "Imagem única", "Stories", "Outro"]
 const plataformas: Plataforma[] = ["Instagram", "Facebook", "TikTok", "YouTube", "LinkedIn"]
+
+const statusOptions: { value: IdeiaStatus | "todos"; label: string }[] = [
+  { value: "todos", label: "Todos os status" },
+  { value: "rascunho", label: "Rascunho" },
+  { value: "ideia_criada", label: "Ideia Criada" },
+  { value: "ideia_em_aprovacao", label: "Em Aprovação" },
+  { value: "ideia_em_alteracao", label: "Em Alteração" },
+  { value: "em_design", label: "Em Design" },
+  { value: "aprovada", label: "Aprovada" },
+  { value: "reprovada", label: "Reprovada" },
+]
 
 function MonthPicker({
   value,
@@ -68,6 +79,7 @@ export default function IdeiasPage() {
   const [localFilter, setLocalFilter] = React.useState("")
   const [formatoFilter, setFormatoFilter] = React.useState<string>("todos")
   const [plataformaFilter, setPlataformaFilter] = React.useState<string>("todos")
+  const [statusFilter, setStatusFilter] = React.useState<string>("todos")
   const [selected, setSelected] = React.useState<Ideia | null>(null)
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(true)
@@ -75,14 +87,7 @@ export default function IdeiasPage() {
   const clienteIdForFetch = user?.role === "cliente" ? user.cliente_id : (cliente?.id ?? null)
 
   const refetch = React.useCallback(async () => {
-    console.log("=== DEBUG IDEIAS ===")
-    console.log("User role:", user?.role)
-    console.log("User cliente_id:", user?.cliente_id)
-    console.log("Cliente selecionado:", cliente?.id)
-    console.log("clienteIdForFetch:", clienteIdForFetch)
-
     if (user?.role === "cliente" && !clienteIdForFetch) {
-      console.log("Cliente sem ID - retornando lista vazia")
       setItems([])
       setLoading(false)
       return
@@ -90,17 +95,13 @@ export default function IdeiasPage() {
 
     setLoading(true)
     try {
-      console.log("Enviando para backend:", { clienteId: clienteIdForFetch, periodo })
       const data = await bridge("ideias", "list", {
         clienteId: clienteIdForFetch,
         periodo,
       })
-      console.log("Dados recebidos do backend:", data)
       const list = normalizeIdeasList(data as Ideia[], IDEA_STATUS.RASCUNHO)
-      console.log("Lista normalizada:", list)
       setItems(list)
     } catch (err: any) {
-      console.error("Erro ao carregar ideias:", err)
       setItems([]) // Limpa a lista em caso de erro
       toast({
         title: "Erro ao carregar ideias",
@@ -121,6 +122,18 @@ export default function IdeiasPage() {
   const filtered = React.useMemo(() => {
     let result = items
 
+    if (canUseAdvancedFilters && cliente?.id) {
+      result = result.filter((i) => i.cliente_id === cliente.id)
+    }
+
+    if (periodo) {
+      result = result.filter((i) => {
+        if (!i.data_publicacao) return false // Só mostra itens com data de publicação definida
+        const itemDate = new Date(i.data_publicacao)
+        return itemDate.getMonth() + 1 === periodo.month && itemDate.getFullYear() === periodo.year
+      })
+    }
+
     const q = localFilter.toLowerCase().trim()
     if (q) {
       result = result.filter((i) => [i.titulo, i.ideia, i.legenda].some((f) => (f ?? "").toLowerCase().includes(q)))
@@ -134,8 +147,12 @@ export default function IdeiasPage() {
       result = result.filter((i) => i.plataforma === plataformaFilter)
     }
 
+    if (statusFilter !== "todos") {
+      result = result.filter((i) => i.status === statusFilter)
+    }
+
     return result
-  }, [items, localFilter, formatoFilter, plataformaFilter])
+  }, [items, localFilter, formatoFilter, plataformaFilter, statusFilter, cliente, periodo, canUseAdvancedFilters])
 
   const getClienteNome = React.useCallback((id: string) => clientes.find((c) => c.id === id)?.nome ?? "—", [clientes])
 
@@ -215,6 +232,18 @@ export default function IdeiasPage() {
           onChange={(e) => setLocalFilter(e.target.value)}
           className="max-w-xs"
         />
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            {statusOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {canUseAdvancedFilters && (
           <>
             <Select value={formatoFilter} onValueChange={setFormatoFilter}>
