@@ -7,6 +7,8 @@ import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
 import { UploadCloud, ImageIcon, VideoIcon, Crown, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
 import { publicUrlFromPath } from "@/lib/public-url"
+import { bridge } from "@/lib/bridge" // Importar a bridge
+import { useToast } from "@/hooks/use-toast" // Importar o hook de toast
 
 type FileItem = {
   file: File
@@ -46,6 +48,7 @@ export function UploadMediaDialog({
   const [selectedCover, setSelectedCover] = React.useState<string | null>(initial?.coverPath ?? null)
   const [dragOver, setDragOver] = React.useState(false)
   const [carouselIndex, setCarouselIndex] = React.useState(0)
+  const { toast } = useToast() // Inicializar o toast
 
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -75,16 +78,34 @@ export function UploadMediaDialog({
     })
   }
 
-  function removeExisting(idx: number) {
-    setExisting((prev) => {
-      const next = prev.slice()
-      const removed = next.splice(idx, 1)[0]
-      if (removed && selectedCover === removed) {
-        setSelectedCover(next[0] ?? null)
-      }
-      return next
-    })
-    setCarouselIndex(Math.max(0, carouselIndex - 1))
+  // --- MUDANÇA PRINCIPAL AQUI ---
+  async function removeExisting(idx: number) {
+    const pathToRemove = existing[idx]
+    if (!pathToRemove) return
+
+    try {
+      // Chama o webhook para deletar o arquivo no Supabase
+      await bridge("publicacoes", "delete_midia", { path: pathToRemove })
+      
+      toast({ title: "Mídia removida com sucesso!" })
+
+      // Se a chamada for bem-sucedida, atualiza o estado local
+      setExisting((prev) => {
+        const next = prev.filter((_, i) => i !== idx)
+        if (pathToRemove && selectedCover === pathToRemove) {
+          setSelectedCover(next[0] ?? null)
+        }
+        return next
+      })
+      setCarouselIndex(Math.max(0, carouselIndex - 1))
+
+    } catch (error: any) {
+      toast({
+        title: "Erro ao remover mídia",
+        description: error.message || "Não foi possível apagar o arquivo no armazenamento.",
+        variant: "destructive",
+      })
+    }
   }
 
   function removeNew(idx: number) {
