@@ -2,13 +2,15 @@
 import { createContext, useContext, useMemo, useState, useEffect } from "react"
 import type React from "react"
 import type { Cliente, AuthUser } from "@/lib/types"
+import { getSupabaseBrowserClient } from "@/lib/supabase-client" // Importamos o cliente Supabase
 
 type Periodo = { month: number; year: number }
 type AppState = {
-  user: AuthUser | null // Adicionado para guardar o usuário logado
-  setUser: (user: AuthUser | null) => void // Adicionado
+  user: AuthUser | null
+  setUser: (user: AuthUser | null) => void
   cliente: Cliente | null
   setCliente: (c: Cliente | null) => void
+  clientes: Cliente[] // A lista de clientes agora virá do Supabase
   periodo: Periodo
   setPeriodo: (p: Periodo) => void
   search: string
@@ -20,14 +22,34 @@ const AppStateContext = createContext<AppState | undefined>(undefined)
 const DEFAULT_PERIODO: Periodo = { month: new Date().getMonth() + 1, year: new Date().getFullYear() }
 
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null) // Adicionado
+  const [user, setUser] = useState<AuthUser | null>(null)
   const [cliente, setCliente] = useState<Cliente | null>(null)
+  const [clientes, setClientes] = useState<Cliente[]>([]) // Estado para a lista de clientes
   const [periodo, setPeriodo] = useState<Periodo>(DEFAULT_PERIODO)
   const [search, setSearch] = useState("")
 
+  // --- MUDANÇA PRINCIPAL AQUI ---
+  // Hook para buscar os clientes do Supabase quando a aplicação carregar
+  useEffect(() => {
+    async function fetchClientes() {
+      const supabase = getSupabaseBrowserClient()
+      if (!supabase) return
+
+      // Busca 'id' e 'nome' da sua tabela 'clientes'
+      const { data, error } = await supabase.from('clientes').select('id, nome')
+      
+      if (error) {
+        console.error("Erro ao buscar clientes:", error)
+        return
+      }
+      setClientes(data as Cliente[])
+    }
+    fetchClientes()
+  }, []) // O array vazio [] garante que isso só rode uma vez
+
   const value = useMemo(
-    () => ({ user, setUser, cliente, setCliente, periodo, setPeriodo, search, setSearch }),
-    [user, cliente, periodo, search],
+    () => ({ user, setUser, cliente, setCliente, clientes, periodo, setPeriodo, search, setSearch }),
+    [user, cliente, clientes, periodo, search],
   )
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>
 }
@@ -38,17 +60,8 @@ export function useAppState() {
   return ctx
 }
 
-// mock simples de clientes
+// A função useClientes agora simplesmente consome o estado que já foi buscado.
 export function useClientes() {
-  const [clientes, setClientes] = useState<Cliente[]>([])
-  useEffect(() => {
-    // Idealmente, isso viria de uma chamada de API
-    setClientes([
-      { id: "cli_3haus", nome: "3haus" },
-      { id: "cli_auramar", nome: "Auramar" },
-      { id: "cli_caminho_do_surf", nome: "Caminho do surf" },
-      // Adicione seus outros clientes aqui
-    ])
-  }, [])
-  return clientes
+    const { clientes } = useAppState();
+    return clientes;
 }

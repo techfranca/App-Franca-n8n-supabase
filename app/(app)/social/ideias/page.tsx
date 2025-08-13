@@ -50,65 +50,49 @@ function MonthPicker({
 }
 
 export default function IdeiasPage() {
-  const { user, cliente, periodo, setCliente, setPeriodo } = useAppState() // MUDANÇA AQUI
+  const { user, cliente, periodo, setCliente, setPeriodo } = useAppState()
   const clientes = useClientes()
   const { toast } = useToast()
 
   const isClient = user?.role === "cliente"
   const canCreate = user?.role === "admin" || user?.role === "colaborador"
 
-  const effectiveCliente = React.useMemo(() => {
-    // Para clientes, o cliente efetivo é sempre o deles.
-    if (isClient && user?.cliente_id) {
-        return clientes.find((c) => c.id === user.cliente_id) ?? null
-    }
-    // Para admin/colaborador, usa o que está selecionado no combobox.
-    return cliente
-  }, [isClient, user, cliente, clientes])
-
+  // O cliente efetivo é o do estado global. Simples assim.
+  const effectiveCliente = cliente
 
   const [items, setItems] = React.useState<Ideia[]>([])
   const [localFilter, setLocalFilter] = React.useState("")
   const [selected, setSelected] = React.useState<Ideia | null>(null)
   const [open, setOpen] = React.useState(false)
-  const [loading, setLoading] = React.useState(true) // Inicia como true
-  const reqIdRef = React.useRef(0)
-
-  // O cliente selecionável pelo combobox (só para admin/colab)
-  const restrictedClientes = React.useMemo(() => {
-    return isClient && effectiveCliente ? [effectiveCliente] : clientes
-  }, [clientes, isClient, effectiveCliente])
-
+  const [loading, setLoading] = React.useState(true)
+  
   const refetch = React.useCallback(async () => {
-    // Não busca dados se o cliente ainda não foi definido pelo StateSync
-    if (!effectiveCliente && isClient) return;
-
+    // Se for cliente, só busca se o cliente estiver definido. Se for admin, busca todos se nenhum cliente for selecionado.
+    if (isClient && !effectiveCliente) {
+        setLoading(false);
+        return;
+    }
     setLoading(true)
-    const myReqId = ++reqIdRef.current
     try {
       const data = await bridge("ideias", "list", {
         clienteId: effectiveCliente?.id ?? null,
         periodo,
       })
-      const list = normalizeIdeasList(data, isClient ? IDEA_STATUS.EM_APROVACAO : IDEA_STATUS.RASCUNHO)
-
-      if (reqIdRef.current === myReqId) setItems(list)
+      const list = normalizeIdeasList(data as Ideia[], IDEA_STATUS.RASCUNHO)
+      setItems(list)
     } catch (err: any) {
-      if (reqIdRef.current === myReqId) {
+        setItems([]); // Limpa a lista em caso de erro
         toast({
-          title: "Erro ao carregar ideias",
-          description: err?.message || String(err),
-          variant: "destructive",
+            title: "Erro ao carregar ideias",
+            description: err?.message || String(err),
+            variant: "destructive",
         })
-      }
     } finally {
-      if (reqIdRef.current === myReqId) setLoading(false)
+      setLoading(false)
     }
   }, [isClient, effectiveCliente, periodo, toast])
 
   React.useEffect(() => {
-    // O StateSync no layout vai definir o cliente, o que acionará o refetch.
-    // Nós podemos chamar o refetch diretamente quando o effectiveCliente mudar.
     refetch()
   }, [refetch])
 
@@ -127,29 +111,18 @@ export default function IdeiasPage() {
     setItems((p) => p.filter((i) => i.id !== row.id))
   }
 
-  async function onUpdated(_next: Ideia) {
-    await refetch()
-  }
-
-  function onCreated(i: Ideia) {
-    setItems((prev) => [i, ...prev])
-  }
-
   const getClienteNome = React.useCallback((id: string) => clientes.find((c) => c.id === id)?.nome ?? "—", [clientes])
 
   async function approve(item: Ideia, comment?: string) {
     const next = nextIdeaStatusOnClientApprove(item.status)
     const optimistic = items.map((i) => (i.id === item.id ? { ...i, status: next } : i))
     setItems(optimistic)
-
     try {
       const full = optimistic.find((i) => i.id === item.id) ?? item
       const payload = buildIdeaUpdatePayload(full, { status: next, comentario: comment ?? "" })
       await bridge("ideias", "update_aprovado", payload)
-
       const pubPayload = buildPublicationCreateFromIdeaPayload(full)
       await bridge("publicacoes", "create_from_idea", pubPayload)
-
       toast({ title: "Ideia aprovada e publicação criada" })
     } catch (err: any) {
       setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: item.status } : i)))
@@ -172,10 +145,7 @@ export default function IdeiasPage() {
     const prevSnapshot = items
     setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: next, needs_reapproval: false } : i)))
     try {
-      const payload = buildIdeaUpdatePayload(
-        { ...item, status: next, needs_reapproval: false },
-        { status: next, comentario: comment },
-      )
+      const payload = buildIdeaUpdatePayload({ ...item, status: next, needs_reapproval: false }, { status: next, comentario: comment })
       await bridge("ideias", "update_reprovado", payload)
       toast({ title: "Ideia reprovada" })
       await refetch()
@@ -189,13 +159,14 @@ export default function IdeiasPage() {
     <PageShell title="Social Media · Ideias">
       <div className="flex items-center gap-3 mb-6">
         <ClientCombobox
-          clientes={restrictedClientes}
-          value={effectiveCliente?.id ?? null}
+          clientes={clientes}
+          value={cliente?.id ?? null}
           onChange={(id) => {
-            if (user?.role === "cliente") return
-            const c = restrictedClientes.find((x) => x.id === id) ?? null
+            if (isClient) return
+            const c = clientes.find((x) => x.id === id) ?? null
             setCliente(c)
           }}
+          disabled={isClient}
         />
         <Separator orientation="vertical" className="h-6" />
         <MonthPicker value={periodo} onChange={setPeriodo} />
@@ -207,7 +178,7 @@ export default function IdeiasPage() {
           className="max-w-xs"
         />
         <div className="ml-auto">
-          {canCreate && <NewIdeaDialog clienteId={effectiveCliente?.id ?? null} onCreated={onCreated} />}
+          {canCreate && <NewIdeaDialog clienteId={effectiveCliente?.id ?? null} onCreated={refetch} />}
         </div>
       </div>
 
@@ -215,7 +186,7 @@ export default function IdeiasPage() {
         <Card className="p-6 text-sm text-muted-foreground">Carregando ideias...</Card>
       ) : items.length === 0 ? (
         <Card className="p-6 text-sm text-muted-foreground">
-          Sem ideias no período/cliente selecionado — bora criar a primeira?
+          Sem ideias no período/cliente selecionado.
         </Card>
       ) : (
         <IdeasCardList
