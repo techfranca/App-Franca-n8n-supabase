@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input"
 import { IdeasCardList } from "@/features/social/ideias/ideas-card-list"
 import { Card } from "@/components/ui/card"
 import { normalizeIdeasList } from "@/lib/normalize-ideas-list"
-import { getUser } from "@/lib/auth-client"
 import { IDEA_STATUS, nextIdeaStatusOnClientApprove, nextIdeaStatusOnClientReject } from "@/lib/status"
 import { buildIdeaUpdatePayload, buildPublicationCreateFromIdeaPayload } from "@/lib/build-payload"
 import { ClientCombobox } from "@/components/client-combobox"
@@ -51,53 +50,47 @@ function MonthPicker({
 }
 
 export default function IdeiasPage() {
-  const { cliente, periodo, setCliente, setPeriodo } = useAppState()
+  const { user, cliente, periodo, setCliente, setPeriodo } = useAppState() // MUDANÇA AQUI
   const clientes = useClientes()
   const { toast } = useToast()
-  const user = React.useMemo(() => getUser(), [])
+
   const isClient = user?.role === "cliente"
   const canCreate = user?.role === "admin" || user?.role === "colaborador"
 
   const effectiveCliente = React.useMemo(() => {
-    if (!isClient) return cliente
-    if (user?.cliente_id) {
-      return clientes.find((c) => c.id === user.cliente_id) ?? cliente
+    // Para clientes, o cliente efetivo é sempre o deles.
+    if (isClient && user?.cliente_id) {
+        return clientes.find((c) => c.id === user.cliente_id) ?? null
     }
-    const matchByName = clientes.find((c) => c.nome.toLowerCase() === (user?.name || "").toLowerCase())
-    return matchByName ?? cliente
-  }, [isClient, clientes, user?.cliente_id, user?.name, cliente])
+    // Para admin/colaborador, usa o que está selecionado no combobox.
+    return cliente
+  }, [isClient, user, cliente, clientes])
+
 
   const [items, setItems] = React.useState<Ideia[]>([])
   const [localFilter, setLocalFilter] = React.useState("")
   const [selected, setSelected] = React.useState<Ideia | null>(null)
   const [open, setOpen] = React.useState(false)
-  const [loading, setLoading] = React.useState(false)
+  const [loading, setLoading] = React.useState(true) // Inicia como true
   const reqIdRef = React.useRef(0)
 
+  // O cliente selecionável pelo combobox (só para admin/colab)
   const restrictedClientes = React.useMemo(() => {
-    const myClient = effectiveCliente
-    return user?.role === "cliente" && myClient ? [myClient] : clientes
-  }, [clientes, user?.role, effectiveCliente])
+    return isClient && effectiveCliente ? [effectiveCliente] : clientes
+  }, [clientes, isClient, effectiveCliente])
 
   const refetch = React.useCallback(async () => {
-    if (isClient && !effectiveCliente?.id) return
+    // Não busca dados se o cliente ainda não foi definido pelo StateSync
+    if (!effectiveCliente && isClient) return;
+
     setLoading(true)
     const myReqId = ++reqIdRef.current
     try {
       const data = await bridge("ideias", "list", {
-        clienteId: effectiveCliente?.id ?? cliente?.id ?? null,
+        clienteId: effectiveCliente?.id ?? null,
         periodo,
       })
-      let list = normalizeIdeasList(data, isClient ? IDEA_STATUS.EM_APROVACAO : IDEA_STATUS.RASCUNHO)
-
-      if (isClient && effectiveCliente?.id) {
-        const cid = effectiveCliente.id
-        list = list.filter(
-          (i) =>
-            i.cliente_id === cid ||
-            (i.cliente_nome && i.cliente_nome.toLowerCase() === (effectiveCliente.nome || "").toLowerCase()),
-        )
-      }
+      const list = normalizeIdeasList(data, isClient ? IDEA_STATUS.EM_APROVACAO : IDEA_STATUS.RASCUNHO)
 
       if (reqIdRef.current === myReqId) setItems(list)
     } catch (err: any) {
@@ -111,9 +104,11 @@ export default function IdeiasPage() {
     } finally {
       if (reqIdRef.current === myReqId) setLoading(false)
     }
-  }, [isClient, effectiveCliente?.id, effectiveCliente?.nome, cliente?.id, periodo, toast])
+  }, [isClient, effectiveCliente, periodo, toast])
 
   React.useEffect(() => {
+    // O StateSync no layout vai definir o cliente, o que acionará o refetch.
+    // Nós podemos chamar o refetch diretamente quando o effectiveCliente mudar.
     refetch()
   }, [refetch])
 
@@ -153,11 +148,7 @@ export default function IdeiasPage() {
       await bridge("ideias", "update_aprovado", payload)
 
       const pubPayload = buildPublicationCreateFromIdeaPayload(full)
-      try {
-        await bridge("publicacoes", "create_from_idea", pubPayload)
-      } catch (e1: any) {
-        await bridge("publicacoes", "create", pubPayload)
-      }
+      await bridge("publicacoes", "create_from_idea", pubPayload)
 
       toast({ title: "Ideia aprovada e publicação criada" })
     } catch (err: any) {
@@ -199,7 +190,7 @@ export default function IdeiasPage() {
       <div className="flex items-center gap-3 mb-6">
         <ClientCombobox
           clientes={restrictedClientes}
-          value={cliente?.id ?? null}
+          value={effectiveCliente?.id ?? null}
           onChange={(id) => {
             if (user?.role === "cliente") return
             const c = restrictedClientes.find((x) => x.id === id) ?? null
@@ -216,7 +207,7 @@ export default function IdeiasPage() {
           className="max-w-xs"
         />
         <div className="ml-auto">
-          {canCreate && <NewIdeaDialog clienteId={effectiveCliente?.id ?? cliente?.id ?? null} onCreated={onCreated} />}
+          {canCreate && <NewIdeaDialog clienteId={effectiveCliente?.id ?? null} onCreated={onCreated} />}
         </div>
       </div>
 
@@ -230,7 +221,7 @@ export default function IdeiasPage() {
         <IdeasCardList
           items={filtered}
           getClienteNome={getClienteNome}
-          role={isClient ? "cliente" : (user?.role as any)}
+          role={user?.role}
           onEdit={!isClient ? onEdit : undefined}
           onDelete={!isClient ? onDelete : undefined}
           onApprove={isClient ? approve : undefined}
