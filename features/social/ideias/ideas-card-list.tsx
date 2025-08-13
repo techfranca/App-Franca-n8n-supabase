@@ -17,6 +17,7 @@ export function IdeasCardList({
   items,
   getClienteNome,
   role = "admin",
+  userClienteId, // Adicionando userClienteId para filtro de segurança
   onEdit,
   onDelete,
   onApprove,
@@ -25,6 +26,7 @@ export function IdeasCardList({
   items: Ideia[]
   getClienteNome: (clienteId: string) => string
   role?: UserRole
+  userClienteId?: string | null // Novo parâmetro para filtro de segurança
   onEdit?: (item: Ideia) => void
   onDelete?: (item: Ideia) => void
   onApprove?: (item: Ideia, comment?: string) => void
@@ -38,6 +40,15 @@ export function IdeasCardList({
   const canEdit = role === "admin" || role === "colaborador"
   const canSeeComments = !isClient
 
+  const filteredItems = React.useMemo(() => {
+    if (isClient && userClienteId) {
+      // Para clientes: mostrar apenas itens do próprio cliente
+      return items.filter((item) => item.cliente_id === userClienteId)
+    }
+    // Para admin/colaborador: mostrar todos os itens
+    return items
+  }, [items, isClient, userClienteId])
+
   // Confirmação dupla
   const [delTarget, setDelTarget] = React.useState<Ideia | null>(null)
   const [confirmStep, setConfirmStep] = React.useState<0 | 1 | 2>(0)
@@ -46,7 +57,7 @@ export function IdeasCardList({
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {items.map((i) => {
+        {filteredItems.map((i) => {
           const dataPost = i.data_publicacao ?? ""
           const comentarios = i.comentarios ?? []
           const comentariosCount = comentarios.length

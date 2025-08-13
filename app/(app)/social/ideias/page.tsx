@@ -57,7 +57,8 @@ export default function IdeiasPage() {
   const isClient = user?.role === "cliente"
   const canCreate = user?.role === "admin" || user?.role === "colaborador"
 
-  // O cliente efetivo é o do estado global. Simples assim.
+  // Para administradores, o cliente efetivo é o que está selecionado no estado.
+  // Para clientes, é sempre o seu próprio cliente, garantido pelo AuthGuard.
   const effectiveCliente = cliente
 
   const [items, setItems] = React.useState<Ideia[]>([])
@@ -65,36 +66,56 @@ export default function IdeiasPage() {
   const [selected, setSelected] = React.useState<Ideia | null>(null)
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(true)
-  
+
+  const clienteIdForFetch = user?.role === "cliente" ? user.cliente_id : (cliente?.id ?? null)
+
   const refetch = React.useCallback(async () => {
-    // Se for cliente, só busca se o cliente estiver definido. Se for admin, busca todos se nenhum cliente for selecionado.
-    if (isClient && !effectiveCliente) {
-        setLoading(false);
-        return;
+    // Lógica de segurança: determina o ID do cliente para a busca.
+    // Se for um cliente, usa o seu próprio `cliente_id`.
+    // Se for admin/colaborador, usa o cliente selecionado no combobox (que pode ser null para ver todos).
+    console.log("=== DEBUG IDEIAS ===")
+    console.log("User role:", user?.role)
+    console.log("User cliente_id:", user?.cliente_id)
+    console.log("Cliente selecionado:", cliente?.id)
+    console.log("clienteIdForFetch:", clienteIdForFetch)
+
+    // Um cliente nunca deve buscar sem um ID.
+    if (user?.role === "cliente" && !clienteIdForFetch) {
+      console.log("Cliente sem ID - retornando lista vazia")
+      setItems([])
+      setLoading(false)
+      return
     }
+
     setLoading(true)
     try {
+      console.log("Enviando para backend:", { clienteId: clienteIdForFetch, periodo })
       const data = await bridge("ideias", "list", {
-        clienteId: effectiveCliente?.id ?? null,
+        clienteId: clienteIdForFetch,
         periodo,
       })
+      console.log("Dados recebidos do backend:", data)
       const list = normalizeIdeasList(data as Ideia[], IDEA_STATUS.RASCUNHO)
+      console.log("Lista normalizada:", list)
       setItems(list)
     } catch (err: any) {
-        setItems([]); // Limpa a lista em caso de erro
-        toast({
-            title: "Erro ao carregar ideias",
-            description: err?.message || String(err),
-            variant: "destructive",
-        })
+      console.error("Erro ao carregar ideias:", err)
+      setItems([]) // Limpa a lista em caso de erro
+      toast({
+        title: "Erro ao carregar ideias",
+        description: err?.message || String(err),
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
-  }, [isClient, effectiveCliente, periodo, toast])
+  }, [user, cliente, periodo, toast])
 
   React.useEffect(() => {
-    refetch()
-  }, [refetch])
+    if (user) {
+      refetch()
+    }
+  }, [refetch, user])
 
   const filtered = React.useMemo(() => {
     const q = localFilter.toLowerCase().trim()
@@ -145,7 +166,10 @@ export default function IdeiasPage() {
     const prevSnapshot = items
     setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: next, needs_reapproval: false } : i)))
     try {
-      const payload = buildIdeaUpdatePayload({ ...item, status: next, needs_reapproval: false }, { status: next, comentario: comment })
+      const payload = buildIdeaUpdatePayload(
+        { ...item, status: next, needs_reapproval: false },
+        { status: next, comentario: comment },
+      )
       await bridge("ideias", "update_reprovado", payload)
       toast({ title: "Ideia reprovada" })
       await refetch()
@@ -157,6 +181,8 @@ export default function IdeiasPage() {
 
   return (
     <PageShell title="Social Media · Ideias">
+      
+
       <div className="flex items-center gap-3 mb-6">
         <ClientCombobox
           clientes={clientes}
@@ -185,14 +211,13 @@ export default function IdeiasPage() {
       {loading ? (
         <Card className="p-6 text-sm text-muted-foreground">Carregando ideias...</Card>
       ) : items.length === 0 ? (
-        <Card className="p-6 text-sm text-muted-foreground">
-          Sem ideias no período/cliente selecionado.
-        </Card>
+        <Card className="p-6 text-sm text-muted-foreground">Sem ideias no período/cliente selecionado.</Card>
       ) : (
         <IdeasCardList
           items={filtered}
           getClienteNome={getClienteNome}
           role={user?.role}
+          userClienteId={user?.cliente_id} // Adicionando userClienteId para filtro de segurança
           onEdit={!isClient ? onEdit : undefined}
           onDelete={!isClient ? onDelete : undefined}
           onApprove={isClient ? approve : undefined}

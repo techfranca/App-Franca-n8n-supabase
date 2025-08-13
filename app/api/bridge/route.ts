@@ -84,28 +84,79 @@ function mockBridge(resource: string, action: string, payload: any): unknown {
       mockDB.ideias.push(
         {
           id: "id_mock_1",
-          cliente_id: "cli_3haus",
-          titulo: "Reels bastidores 3haus",
+          cliente_id: "cli_allysson_valadao",
+          titulo: "Reels motivacional Allysson",
           plataforma: "Instagram",
           formato: "Reels",
-          ideia: "Bastidores da obra",
-          roteiro: "Cenas curtas",
-          legenda: "Acompanhe nossos bastidores na 3haus!",
+          ideia: "Vídeo motivacional para engajar seguidores",
+          roteiro: "Cenas inspiradoras com mensagem positiva",
+          legenda: "Transforme sua vida com atitude positiva! 💪",
           status: "ideia_em_aprovacao",
           comentarios: [],
           created_at: nowISO,
         },
         {
           id: "id_mock_2",
-          cliente_id: "cli_auramar",
-          titulo: "Carrossel dicas",
-          plataforma: "Facebook",
+          cliente_id: "cli_caminho_do_surf",
+          titulo: "Carrossel dicas de surf",
+          plataforma: "Instagram",
           formato: "Carrossel",
-          ideia: "Dicas semanais",
-          legenda: "Dica da semana!",
+          ideia: "Dicas essenciais para iniciantes no surf",
+          legenda: "Aprenda a surfar com segurança! 🏄‍♂️",
           status: "aprovada",
           comentarios: [],
           created_at: nowISO,
+        },
+      )
+    }
+  }
+
+  const ensureSeedPublicacoes = () => {
+    if (mockDB.publicacoes.length === 0) {
+      mockDB.publicacoes.push(
+        {
+          id: "pub_mock_1",
+          cliente_id: "cli_allysson_valadao",
+          titulo: "Post Allysson Valadão",
+          plataforma: "Instagram",
+          formato: "Post",
+          legenda: "Conteúdo exclusivo do Allysson Valadão",
+          status: "publicacao_em_aprovacao",
+          comentarios: [],
+          created_at: nowISO,
+          midia_url: null,
+          midia_url1: "api/uploads/1755004837212_ruwdt23xm1",
+          midia_url2: null,
+          midia_url3: null,
+          midia_url4: null,
+          midia_url5: null,
+          midia_url6: null,
+          midia_url7: null,
+          midia_url8: null,
+          midia_url9: null,
+          midia_url10: null,
+        },
+        {
+          id: "pub_mock_2",
+          cliente_id: "cli_caminho_do_surf",
+          titulo: "Post Caminho do Surf",
+          plataforma: "Instagram",
+          formato: "Reels",
+          legenda: "Aventuras no surf com Caminho do Surf",
+          status: "publicacao_em_aprovacao",
+          comentarios: [],
+          created_at: nowISO,
+          midia_url: null,
+          midia_url1: "api/uploads/1755014778333_5v4k2pgj2ii",
+          midia_url2: null,
+          midia_url3: null,
+          midia_url4: null,
+          midia_url5: null,
+          midia_url6: null,
+          midia_url7: null,
+          midia_url8: null,
+          midia_url9: null,
+          midia_url10: null,
         },
       )
     }
@@ -116,7 +167,22 @@ function mockBridge(resource: string, action: string, payload: any): unknown {
 
     if (action === "list") {
       const cid = payload?.clienteId ?? null
-      return cid ? mockDB.ideias.filter((x) => x.cliente_id === cid) : mockDB.ideias
+      console.log("🔍 BACKEND DEBUG IDEIAS:")
+      console.log("  - Cliente ID recebido:", cid)
+      console.log("  - Total de ideias no mockDB:", mockDB.ideias.length)
+      console.log(
+        "  - Cliente IDs existentes:",
+        mockDB.ideias.map((i) => `${i.id}: ${i.cliente_id}`),
+      )
+
+      const result = cid ? mockDB.ideias.filter((x) => x.cliente_id === cid) : mockDB.ideias
+      console.log("  - Ideias retornadas após filtro:", result.length)
+      console.log(
+        "  - IDs das ideias retornadas:",
+        result.map((i) => `${i.id}: ${i.cliente_id}`),
+      )
+
+      return result
     }
     if (action === "create") {
       const computedStatus = payload?.status ?? (payload?.dataAprovacao ? "aprovada" : "ideia_em_aprovacao")
@@ -228,9 +294,25 @@ function mockBridge(resource: string, action: string, payload: any): unknown {
   }
 
   if (resource === "publicacoes") {
+    ensureSeedPublicacoes()
+
     if (action === "list") {
       const cid = payload?.clienteId ?? null
+      console.log("🔍 BACKEND DEBUG PUBLICAÇÕES:")
+      console.log("  - Cliente ID recebido:", cid)
+      console.log("  - Total de publicações no mockDB:", mockDB.publicacoes.length)
+      console.log(
+        "  - Cliente IDs existentes:",
+        mockDB.publicacoes.map((p) => `${p.id}: ${p.cliente_id}`),
+      )
+
       const arr = cid ? mockDB.publicacoes.filter((x) => x.cliente_id === cid) : mockDB.publicacoes
+      console.log("  - Publicações retornadas após filtro:", arr.length)
+      console.log(
+        "  - IDs das publicações retornadas:",
+        arr.map((p) => `${p.id}: ${p.cliente_id}`),
+      )
+
       return arr
     }
     if (action === "create_from_idea" || action === "create") {

@@ -36,6 +36,7 @@ import { publicUrlFromPath, uploadMediaFilesToSupabase } from "@/lib/supabase-cl
 export function PubsCardList({
   items,
   role = "admin",
+  userClienteId, // Adicionando userClienteId para filtro de segurança
   onEdit,
   onDelete,
   onPublish,
@@ -45,6 +46,7 @@ export function PubsCardList({
 }: {
   items: Publicacao[]
   role?: UserRole
+  userClienteId?: string | null // Novo parâmetro para filtro de segurança
   onEdit: (item: Publicacao) => void
   onDelete: (item: Publicacao) => void
   onPublish: (item: Publicacao) => void
@@ -315,7 +317,16 @@ export function PubsCardList({
     )
   }
 
-  const filteredPublications = items.filter((p) => p.status !== "excluido")
+  const securityFilteredItems = React.useMemo(() => {
+    if (isClient && userClienteId) {
+      // Para clientes: mostrar apenas itens do próprio cliente
+      return items.filter((item) => item.cliente_id === userClienteId)
+    }
+    // Para admin/colaborador: mostrar todos os itens
+    return items
+  }, [items, isClient, userClienteId])
+
+  const filteredPublications = securityFilteredItems.filter((p) => p.status !== "excluido")
 
   return (
     <>
@@ -741,6 +752,7 @@ export function PubsCardList({
                       src={
                         publicUrlFromPath(preview.pub.midia_urls[preview.index]) ||
                         "/placeholder.svg?height=300&width=600&query=preview-da-midia-da-publicacao" ||
+                        "/placeholder.svg" ||
                         "/placeholder.svg" ||
                         "/placeholder.svg" ||
                         "/placeholder.svg" ||
