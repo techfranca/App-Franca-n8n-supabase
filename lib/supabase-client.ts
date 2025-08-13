@@ -22,50 +22,46 @@ export function getSupabaseBrowserClient(): SupabaseClient | null {
   return supabase
 }
 
-// Converte path relativo do bucket "midia" em URL pública confiável
-// - Se já for URL absoluta, retorna como está
-// - Normaliza removendo "/" à esquerda e prefixo opcional "midia/"
-// - Fallback local: retorna "/<path>"
+// Converte path relativo do bucket em URL pública confiável
 export function publicUrlFromPath(path?: string | null): string | null {
   if (!path) return null
   const raw = String(path).trim()
   if (!raw) return null
   if (/^https?:\/\//i.test(raw)) return raw
   let p = raw.replace(/^\/+/, "")
-  p = p.replace(/^midia\/+/i, "")
+  p = p.replace(/^publicacoes\/+/i, "")
+  
   const client = getSupabaseBrowserClient()
   if (!client) return `/${p}`
-  const { data } = client.storage.from("midia").getPublicUrl(p)
+  
+  const { data } = client.storage.from("publicacoes").getPublicUrl(p)
   return data?.publicUrl ?? `/${p}`
 }
 
-// Fallback local (preview) — armazena em memória na rota /api/uploads
-async function uploadViaLocalApi(files: File[], opts?: { folder?: string }): Promise<{ path: string }[]> {
-  const form = new FormData()
-  for (const f of files) form.append("files", f, f.name)
-  if (opts?.folder) form.append("folder", opts.folder)
-  const res = await fetch("/api/uploads", { method: "POST", body: form })
-  if (!res.ok) throw new Error(`Falha no upload local (${res.status})`)
-  const json = (await res.json()) as { files: { id: string; path: string }[] }
-  return (json.files || []).map((f) => ({ path: f.path }))
-}
-
-// Faz upload para o bucket "midia" e retorna somente paths relativos
+// Faz upload para o bucket "publicacoes" e retorna somente paths relativos
 export async function uploadMediaFilesToSupabase(
   files: File[],
   opts?: { folder?: string },
 ): Promise<{ path: string }[]> {
   const client = getSupabaseBrowserClient()
-  if (!client) return uploadViaLocalApi(files, opts)
+  if (!client) {
+    throw new Error("Cliente Supabase não inicializado. Verifique as variáveis de ambiente.");
+  }
+  
   const folder = (opts?.folder || "uploads").replace(/^\/+/, "").replace(/\/+$/, "")
   const upserts = files.map(async (f) => {
     const name = `${Date.now()}_${Math.random().toString(36).slice(2)}_${f.name}`
     const path = `${folder}/${name}`
-    const { error } = await client.storage.from("midia").upload(path, f, {
+    
+    // MUDANÇA IMPORTANTE: Removida a opção { upsert: true }
+    const { error } = await client.storage.from("publicacoes").upload(path, f, {
       contentType: f.type || undefined,
-      upsert: true,
     })
-    if (error) throw error
+
+    if (error) {
+      console.error("Supabase Upload Error:", error);
+      throw error;
+    }
     return { path }
   })
   return Promise.all(upserts)

@@ -1,8 +1,6 @@
 export const dynamic = "force-dynamic"
 
-// Armazenamento em memória para preview (somente runtime do preview)
-// Mantém os bytes enquanto a aba estiver aberta
-type BlobRec = { type: string; data: Uint8Array; name?: string; createdAt: number }
+type BlobRec = { type: string; data: UintArray; name?: string; createdAt: number }
 declare global {
   // eslint-disable-next-line no-var
   var __uploadStore: Map<string, BlobRec> | undefined
