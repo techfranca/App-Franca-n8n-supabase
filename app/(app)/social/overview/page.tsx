@@ -7,10 +7,14 @@ import { MetricCard } from "@/features/social/components/metric-card"
 import { StatusPanel } from "@/features/social/components/status-panel"
 import { ActivityTimeline } from "@/features/social/components/activity-timeline"
 import { Card } from "@/components/ui/card"
+import { useAuth } from "@/lib/auth-client"
 
 export default function SocialOverviewPage() {
   const { cliente, periodo } = useAppState()
-  const { data, loading, error } = useResumoSocialMedia(cliente?.id ?? null, periodo)
+  const { user } = useAuth()
+
+  const clienteIdForFetch = user?.role === "cliente" ? user.cliente_id : (cliente?.id ?? null)
+  const { data, loading, error } = useResumoSocialMedia(clienteIdForFetch, periodo)
 
   return (
     <PageShell title="Social Media · Visão Geral">

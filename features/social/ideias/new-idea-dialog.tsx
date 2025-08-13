@@ -123,7 +123,7 @@ export function NewIdeaDialog({
           {triggerLabel}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto font-montserrat">
+      <DialogContent className="max-w-7xl w-[98vw] max-h-[95vh] overflow-y-auto font-montserrat">
         <DialogHeader className="pb-4">
           <DialogTitle className="text-xl font-semibold text-[#081534]">Nova Ideia</DialogTitle>
         </DialogHeader>
@@ -132,7 +132,7 @@ export function NewIdeaDialog({
           {/* Seção: Informações Básicas */}
           <div className="border border-gray-200 p-4 rounded-lg space-y-4">
             <h3 className="font-semibold text-[#081534] mb-3 text-sm">Informações Básicas</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#081534]">Cliente *</Label>
                 <Select
@@ -163,7 +163,7 @@ export function NewIdeaDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#081534]">Plataforma</Label>
                 <Select
@@ -217,7 +217,7 @@ export function NewIdeaDialog({
           {/* Seção: Conteúdo */}
           <div className="border border-gray-200 p-4 rounded-lg space-y-4">
             <h3 className="font-semibold text-[#081534] mb-3 text-sm">Conteúdo</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#081534]">Ideia</Label>
                 <Textarea
@@ -251,7 +251,7 @@ export function NewIdeaDialog({
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#081534]">Hashtags</Label>
                 <Input
@@ -273,14 +273,16 @@ export function NewIdeaDialog({
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#081534]">Objetivo</Label>
-              <Textarea
-                className="min-h-[80px] resize-none text-sm font-montserrat font-bold"
-                value={data.objetivo ?? ""}
-                onChange={(e) => setData((d) => ({ ...d, objetivo: e.target.value }))}
-                placeholder="Qual o objetivo desta ideia?"
-              />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#081534]">Objetivo</Label>
+                <Textarea
+                  className="min-h-[80px] resize-none text-sm font-montserrat font-bold"
+                  value={data.objetivo ?? ""}
+                  onChange={(e) => setData((d) => ({ ...d, objetivo: e.target.value }))}
+                  placeholder="Qual o objetivo desta ideia?"
+                />
+              </div>
             </div>
           </div>
 

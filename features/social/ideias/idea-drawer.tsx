@@ -164,7 +164,7 @@ export function IdeaDrawer({ open, onOpenChange, ideia, onUpdated, onDeleted }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto font-sans">
+      <DialogContent className="max-w-7xl w-[98vw] max-h-[95vh] overflow-y-auto font-sans">
         <DialogHeader className="pb-4">
           <DialogTitle className="flex items-center justify-between text-xl font-semibold text-[#081534]">
             Editar Ideia · {form.titulo}
@@ -200,7 +200,7 @@ export function IdeaDrawer({ open, onOpenChange, ideia, onUpdated, onDeleted }: 
           {/* Seção: Informações Básicas */}
           <div className="border border-gray-200 p-4 rounded-lg space-y-4">
             <h3 className="font-semibold text-[#081534] mb-3 text-sm">Informações Básicas</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#081534]">Título</Label>
                 <Input
@@ -222,7 +222,7 @@ export function IdeaDrawer({ open, onOpenChange, ideia, onUpdated, onDeleted }: 
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#081534]">Plataforma</Label>
                 <Select value={form.plataforma} onValueChange={(v) => set("plataforma", v as any)} disabled={!canEdit}>
@@ -271,7 +271,7 @@ export function IdeaDrawer({ open, onOpenChange, ideia, onUpdated, onDeleted }: 
           {/* Seção: Conteúdo */}
           <div className="border border-gray-200 p-4 rounded-lg space-y-4">
             <h3 className="font-semibold text-[#081534] mb-3 text-sm">Conteúdo</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#081534]">Ideia</Label>
                 <Textarea
@@ -308,7 +308,7 @@ export function IdeaDrawer({ open, onOpenChange, ideia, onUpdated, onDeleted }: 
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#081534]">Hashtags</Label>
                 <Input

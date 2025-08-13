@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import type { AuthUser } from "./types"
 import { TODOS_OS_USUARIOS } from "./database" // Importamos nossa lista de usuários
 
@@ -26,7 +27,7 @@ export async function signIn(
   email: string,
   password: string,
 ): Promise<{ ok: boolean; user?: AuthUser; error?: string }> {
-  const user = TODOS_OS_USUARIOS.find(u => u.email === email && u.password === password)
+  const user = TODOS_OS_USUARIOS.find((u) => u.email === email && u.password === password)
 
   if (user) {
     // Se encontrou, salva o usuário no localStorage para simular a sessão
@@ -51,6 +52,16 @@ export function setRole(role: AuthUser["role"]) {
   if (currentUser) {
     const updatedUser = { ...currentUser, role }
     localStorage.setItem(AUTH_KEY, JSON.stringify(updatedUser))
-    window.location.reload(); // Recarrega para aplicar as mudanças
+    window.location.reload() // Recarrega para aplicar as mudanças
   }
+}
+
+export function useAuth() {
+  const [user, setUser] = useState<AuthUser | null>(null)
+
+  useEffect(() => {
+    setUser(getUser())
+  }, [])
+
+  return { user }
 }

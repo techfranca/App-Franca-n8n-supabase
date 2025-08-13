@@ -351,29 +351,62 @@ function mockBridge(resource: string, action: string, payload: any): unknown {
   }
 
   if (resource === "social_resumo" && action === "get") {
+    ensureSeedIdeias()
+    ensureSeedPublicacoes()
+
+    const clienteId = payload?.clienteId ?? null
+
+    // Filtrar dados por cliente se especificado
+    const ideiasFiltered = clienteId ? mockDB.ideias.filter((i) => i.cliente_id === clienteId) : mockDB.ideias
+    const publicacoesFiltered = clienteId
+      ? mockDB.publicacoes.filter((p) => p.cliente_id === clienteId)
+      : mockDB.publicacoes
+
+    // Calcular métricas baseadas nos dados filtrados
+    const totalIdeias = ideiasFiltered.length
+    const aguardandoAprovacao = ideiasFiltered.filter((i) => i.status === "ideia_em_aprovacao").length
+    const publicacoesNoMes = publicacoesFiltered.length
+    const emProducao = ideiasFiltered.filter((i) => i.status === "em_design").length
+
+    // Para clientes: sempre 1 cliente ativo (eles mesmos), para admin: contar clientes únicos
+    const clientesAtivosNoMes = clienteId
+      ? 1
+      : new Set([...ideiasFiltered, ...publicacoesFiltered].map((item) => item.cliente_id)).size
+
     return {
-      totalIdeias: mockDB.ideias.length,
-      aguardandoAprovacao: mockDB.ideias.filter((i) => i.status === "ideia_em_aprovacao").length,
-      publicacoesNoMes: mockDB.publicacoes.length,
-      emProducao: mockDB.ideias.filter((i) => i.status === "em_design").length,
-      clientesAtivosNoMes: 3,
+      totalIdeias,
+      aguardandoAprovacao,
+      publicacoesNoMes,
+      emProducao,
+      clientesAtivosNoMes,
       statusIdeias: {
-        ideia_em_aprovacao: mockDB.ideias.filter((i) => i.status === "ideia_em_aprovacao").length,
-        em_design: mockDB.ideias.filter((i) => i.status === "em_design").length,
-        aprovada: mockDB.ideias.filter((i) => i.status === "aprovada").length,
+        ideia_em_aprovacao: ideiasFiltered.filter((i) => i.status === "ideia_em_aprovacao").length,
+        em_design: ideiasFiltered.filter((i) => i.status === "em_design").length,
+        aprovada: ideiasFiltered.filter((i) => i.status === "aprovada").length,
       },
       statusPublicacoes: {
-        publicacao_em_aprovacao: mockDB.publicacoes.filter((p) => p.status === "publicacao_em_aprovacao").length,
-        agendada: mockDB.publicacoes.filter((p) => p.status === "agendada").length,
-        publicada: mockDB.publicacoes.filter((p) => p.status === "publicada").length,
+        publicacao_em_aprovacao: publicacoesFiltered.filter((p) => p.status === "publicacao_em_aprovacao").length,
+        agendada: publicacoesFiltered.filter((p) => p.status === "agendada").length,
+        publicada: publicacoesFiltered.filter((p) => p.status === "publicada").length,
       },
-      atividadeRecente: mockDB.ideias.slice(0, 5).map((i) => ({
-        tipo: "criou ideia",
-        autor: "Sistema",
-        quando: i.created_at,
-        label: i.titulo,
-        href: "/social/ideias",
-      })),
+      atividadeRecente: [
+        ...ideiasFiltered.slice(0, 3).map((i) => ({
+          tipo: "criou ideia",
+          autor: "Sistema",
+          quando: i.created_at,
+          label: i.titulo,
+          href: "/social/ideias",
+        })),
+        ...publicacoesFiltered.slice(0, 2).map((p) => ({
+          tipo: "criou publicação",
+          autor: "Sistema",
+          quando: p.created_at,
+          label: p.titulo,
+          href: "/social/publicacoes",
+        })),
+      ]
+        .sort((a, b) => new Date(b.quando).getTime() - new Date(a.quando).getTime())
+        .slice(0, 5),
     }
   }
 
