@@ -153,8 +153,8 @@ export default function PublicacoesPage() {
 
     if (periodo) {
       result = result.filter((p) => {
-        if (!p.data_postagem) return false // Só mostra itens com data de postagem definida
-        const itemDate = new Date(p.data_postagem)
+        if (!p.data_criacao) return true
+        const itemDate = new Date(p.data_criacao)
         return itemDate.getMonth() + 1 === periodo.month && itemDate.getFullYear() === periodo.year
       })
     }
@@ -180,40 +180,58 @@ export default function PublicacoesPage() {
     return result
   }, [items, localFilter, formatoFilter, plataformaFilter, statusFilter, cliente, periodo, canUseAdvancedFilters])
 
-  function onEdit(row: Publicacao) {
-    setSel(row)
-    setOpen(true)
-  }
-
-  function onDelete(row: Publicacao) {
-    setItems((prev) => prev.filter((p) => p.id !== row.id))
-    toast({
-      title: "Publicação excluída",
-      description: `A publicação "${row.titulo}" foi removida com sucesso.`,
-    })
-  }
-
-  function onUpdated(next: Publicacao) {
-    setItems((prev) => prev.map((p) => (p.id === next.id ? next : p)))
-  }
-
-  async function onPublish(row: Publicacao) {
-    const updated: Publicacao = { ...row, status: "publicada", data_postagem: isoNow() }
-    onUpdated(updated) // Otimista
-    try {
-      const payload = buildPublicationUpdatePayload(updated)
-      await bridge("publicacoes", "update", payload)
-      toast({ title: "Publicação marcada como publicada!" })
-    } catch {
-      onUpdated(row) // Reverte em caso de erro
-      toast({ title: "Erro ao atualizar status", variant: "destructive" })
-    }
-  }
-
   const getClienteNome = React.useCallback((id: string) => clientes.find((c) => c.id === id)?.nome ?? "—", [clientes])
   const getIdeaById = React.useCallback((id?: string | null) => (id ? (ideasById[id] ?? null) : null), [ideasById])
 
   const clienteIdForFetch = user?.role === "cliente" ? user.cliente_id : (cliente?.id ?? null)
+
+  const onEdit = React.useCallback((pub: Publicacao) => {
+    setSel(pub)
+    setOpen(true)
+  }, [])
+
+  const onDelete = React.useCallback(async (pub: Publicacao) => {
+    try {
+      await bridge("publicacoes", "delete", { id: pub.id })
+      setItems((prev) => prev.filter((p) => p.id !== pub.id))
+      toast({
+        title: "Publicação excluída",
+        description: `A publicação "${pub.titulo}" foi excluída com sucesso.`,
+      })
+    } catch (err: any) {
+      toast({
+        title: "Erro ao excluir publicação",
+        description: err?.message || String(err),
+        variant: "destructive",
+      })
+    }
+  }, [])
+
+  const onPublish = React.useCallback(async (pub: Publicacao) => {
+    try {
+      const payload = buildPublicationUpdatePayload(pub, { status: "publicada", data_publicacao: isoNow() })
+      await bridge("publicacoes", "update", payload)
+      setItems((prev) => prev.map((p) => (p.id === pub.id ? { ...p, ...payload } : p)))
+      toast({
+        title: "Publicação publicada",
+        description: `A publicação "${pub.titulo}" foi publicada com sucesso.`,
+      })
+    } catch (err: any) {
+      toast({
+        title: "Erro ao publicar publicação",
+        description: err?.message || String(err),
+        variant: "destructive",
+      })
+    }
+  }, [])
+
+  const onUpdated = React.useCallback((pub: Publicacao) => {
+    setItems((prev) => prev.map((p) => (p.id === pub.id ? pub : p)))
+    toast({
+      title: "Publicação atualizada",
+      description: `A publicação "${pub.titulo}" foi atualizada com sucesso.`,
+    })
+  }, [])
 
   return (
     <PageShell>

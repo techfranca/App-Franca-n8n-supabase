@@ -6,18 +6,15 @@ import { Badge } from "@/components/ui/badge"
 interface CarrosselPreviewProps {
   textoCompleto: string
   onVerTudo: () => void
+  textoVerTudo?: string // Adicionada prop opcional para personalizar texto do botão
 }
 
-export function CarrosselPreview({ textoCompleto, onVerTudo }: CarrosselPreviewProps) {
+export function CarrosselPreview({ textoCompleto, onVerTudo, textoVerTudo = "Ver tudo" }: CarrosselPreviewProps) {
   const { total, secoes } = parseArtes(textoCompleto)
 
   // Se não há conteúdo suficiente, não mostra preview especial
   if (!textoCompleto?.trim() || textoCompleto.length < 100) {
-    return (
-      <div className="text-muted-foreground font-bold max-w-full overflow-x-hidden whitespace-pre-wrap break-words overflow-wrap-break-word">
-        {textoCompleto || "—"}
-      </div>
-    )
+    return <div className="text-muted-foreground font-bold">{textoCompleto || "—"}</div>
   }
 
   // Gera preview: primeiras 2 seções ou truncamento simples
@@ -52,15 +49,12 @@ export function CarrosselPreview({ textoCompleto, onVerTudo }: CarrosselPreviewP
       </div>
 
       {/* Preview do texto */}
-      {/* Melhorada quebra automática de texto no preview do carrossel */}
-      <div className="text-muted-foreground font-bold max-w-full overflow-x-hidden whitespace-pre-wrap break-words overflow-wrap-break-word line-clamp-4">
-        {previewText}
-      </div>
+      <div className="text-muted-foreground font-bold whitespace-pre-wrap line-clamp-4">{previewText}</div>
 
       {/* Link "Ver tudo" */}
       <div className="flex justify-end">
         <Button variant="link" size="sm" onClick={onVerTudo} className="text-[#4b8655] p-0 h-auto text-xs">
-          Ver tudo
+          {textoVerTudo} {/* Usando texto customizável em vez de "Ver tudo" fixo */}
         </Button>
       </div>
     </div>

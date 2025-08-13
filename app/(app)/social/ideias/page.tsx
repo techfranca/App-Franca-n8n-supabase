@@ -102,7 +102,7 @@ export default function IdeiasPage() {
       const list = normalizeIdeasList(data as Ideia[], IDEA_STATUS.RASCUNHO)
       setItems(list)
     } catch (err: any) {
-      setItems([]) // Limpa a lista em caso de erro
+      setItems([])
       toast({
         title: "Erro ao carregar ideias",
         description: err?.message || String(err),
@@ -128,8 +128,8 @@ export default function IdeiasPage() {
 
     if (periodo) {
       result = result.filter((i) => {
-        if (!i.data_publicacao) return false // Só mostra itens com data de publicação definida
-        const itemDate = new Date(i.data_publicacao)
+        if (!i.data_criacao) return true
+        const itemDate = new Date(i.data_criacao)
         return itemDate.getMonth() + 1 === periodo.month && itemDate.getFullYear() === periodo.year
       })
     }

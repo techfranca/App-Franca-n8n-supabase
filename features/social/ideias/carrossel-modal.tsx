@@ -120,8 +120,7 @@ export function CarrosselModal({ aberto, textoCompleto, onClose }: CarrosselModa
             </div>
 
             <div className="bg-gray-50 rounded-lg p-4">
-              {/* Melhorada quebra automática de texto no modal do carrossel */}
-              <div className="text-sm leading-relaxed max-w-full overflow-x-hidden whitespace-pre-wrap break-words overflow-wrap-break-word">
+              <div className="text-sm leading-relaxed max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
                 {secaoAtual.conteudo}
               </div>
             </div>
