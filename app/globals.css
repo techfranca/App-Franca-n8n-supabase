@@ -121,3 +121,22 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Adicionando estilos para quebra automática de texto */
+@layer utilities {
+  .line-clamp-4 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+  }
+
+  /* Estilos para quebra automática de texto em containers */
+  .text-wrap-container {
+    max-width: 100%;
+    overflow-x: hidden;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+}

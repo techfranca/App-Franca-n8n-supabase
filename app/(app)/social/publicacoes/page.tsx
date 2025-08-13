@@ -3,7 +3,7 @@
 import * as React from "react"
 import { PageShell } from "@/components/page-shell"
 import { useAppState, useClientes } from "@/stores/app-state"
-import type { Publicacao, Ideia } from "@/lib/types"
+import type { Publicacao, Ideia, Formato, Plataforma } from "@/lib/types"
 import { PubsCardList } from "@/features/social/publicacoes/pubs-card-list"
 import { PublicationDrawer } from "@/features/social/publicacoes/publication-drawer"
 import { bridge } from "@/lib/bridge"
@@ -20,6 +20,10 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "lucide-react"
 import { addMonths } from "date-fns"
 import { Separator } from "@/components/ui/separator"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+const formatos: Formato[] = ["Reels", "Carrossel", "Imagem única", "Stories", "Outro"]
+const plataformas: Plataforma[] = ["Instagram", "Facebook", "TikTok", "YouTube", "LinkedIn"]
 
 function MonthPicker({
   value,
@@ -53,10 +57,13 @@ export default function PublicacoesPage() {
   const { user, cliente, periodo, setCliente, setPeriodo } = useAppState()
   const clientes = useClientes()
   const role = (user?.role ?? "admin") as "admin" | "colaborador" | "cliente"
+  const canUseAdvancedFilters = user?.role === "admin" || user?.role === "colaborador"
 
   const [items, setItems] = React.useState<Publicacao[]>([])
   const [loading, setLoading] = React.useState(true)
   const [localFilter, setLocalFilter] = React.useState("")
+  const [formatoFilter, setFormatoFilter] = React.useState<string>("todos")
+  const [plataformaFilter, setPlataformaFilter] = React.useState<string>("todos")
   const [sel, setSel] = React.useState<Publicacao | null>(null)
   const [open, setOpen] = React.useState(false)
   const [ideasById, setIdeasById] = React.useState<Record<string, Ideia>>({})
@@ -141,10 +148,24 @@ export default function PublicacoesPage() {
   }, [user, cliente?.id, periodo])
 
   const filtered = React.useMemo(() => {
+    let result = items
+
+    // Filtro de busca por texto
     const q = localFilter.toLowerCase().trim()
-    if (!q) return items
-    return items.filter((p) => [p.titulo, p.legenda].some((f) => (f ?? "").toLowerCase().includes(q)))
-  }, [items, localFilter])
+    if (q) {
+      result = result.filter((p) => [p.titulo, p.legenda].some((f) => (f ?? "").toLowerCase().includes(q)))
+    }
+
+    if (formatoFilter !== "todos") {
+      result = result.filter((p) => p.formato === formatoFilter)
+    }
+
+    if (plataformaFilter !== "todos") {
+      result = result.filter((p) => p.plataforma === plataformaFilter)
+    }
+
+    return result
+  }, [items, localFilter, formatoFilter, plataformaFilter])
 
   function onEdit(row: Publicacao) {
     setSel(row)
@@ -183,9 +204,7 @@ export default function PublicacoesPage() {
 
   return (
     <PageShell>
-      
-
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
         <ClientCombobox
           clientes={restrictedClientes}
           value={cliente?.id ?? null}
@@ -205,6 +224,36 @@ export default function PublicacoesPage() {
           placeholder="Busca (título / legenda)..."
           className="max-w-xs"
         />
+        {canUseAdvancedFilters && (
+          <>
+            <Select value={formatoFilter} onValueChange={setFormatoFilter}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Formato" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos formatos</SelectItem>
+                {formatos.map((formato) => (
+                  <SelectItem key={formato} value={formato}>
+                    {formato}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={plataformaFilter} onValueChange={setPlataformaFilter}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Plataforma" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todas plataformas</SelectItem>
+                {plataformas.map((plataforma) => (
+                  <SelectItem key={plataforma} value={plataforma}>
+                    {plataforma}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        )}
       </div>
 
       {loading ? (

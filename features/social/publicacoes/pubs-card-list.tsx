@@ -426,7 +426,9 @@ export function PubsCardList({
                             : ""}
                         </span>
                       </div>
-                      <div className="whitespace-pre-wrap">{lastComment?.texto || ""}</div>
+                      <div className="max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
+                        {lastComment?.texto || ""}
+                      </div>
                       {comentariosCount > 1 ? (
                         <div className="mt-2">
                           <button
@@ -447,7 +449,9 @@ export function PubsCardList({
                             <span className="font-medium">{c.autor || "Comentário"}</span>{" "}
                             <span>{c.created_at ? "— " + new Date(c.created_at).toLocaleString("pt-BR") : ""}</span>
                           </div>
-                          <div className="whitespace-pre-wrap">{c.texto || ""}</div>
+                          <div className="max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
+                            {c.texto || ""}
+                          </div>
                         </div>
                       ))}
                       <div className="pt-1">
@@ -470,17 +474,23 @@ export function PubsCardList({
                     <>
                       <div>
                         <div className="font-medium">Ideia</div>
-                        <div className="text-muted-foreground">{idea.ideia || "—"}</div>
+                        <div className="text-muted-foreground max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
+                          {idea.ideia || "—"}
+                        </div>
                       </div>
                       {p.formato === "Reels" && idea.roteiro ? (
                         <div>
                           <div className="font-medium">Roteiro</div>
-                          <div className="text-muted-foreground whitespace-pre-wrap">{idea.roteiro}</div>
+                          <div className="text-muted-foreground max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
+                            {idea.roteiro}
+                          </div>
                         </div>
                       ) : null}
                       <div>
                         <div className="font-medium">Legenda</div>
-                        <div className="text-muted-foreground">{p.legenda || "—"}</div>
+                        <div className="text-muted-foreground max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
+                          {p.legenda || "—"}
+                        </div>
                       </div>
                       <div className="grid gap-1 text-xs">
                         <div className="flex items-center gap-2">
@@ -498,7 +508,7 @@ export function PubsCardList({
                               href={String(idea.referencia)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[#4b8655] underline break-all"
+                              className="text-[#4b8655] underline max-w-full overflow-x-hidden break-all"
                             >
                               {String(idea.referencia)}
                             </a>
@@ -510,7 +520,9 @@ export function PubsCardList({
                     <>
                       <div>
                         <div className="font-medium">Legenda</div>
-                        <div className="text-muted-foreground">{p.legenda || "—"}</div>
+                        <div className="text-muted-foreground max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
+                          {p.legenda || "—"}
+                        </div>
                       </div>
                       <div className="grid gap-1 text-xs">
                         <div className="flex items-center gap-2">
@@ -757,6 +769,7 @@ export function PubsCardList({
                       src={
                         publicUrlFromPath(preview.pub.midia_urls[preview.index]) ||
                         "/placeholder.svg?height=300&width=600&query=preview-da-midia-da-publicacao" ||
+                        "/placeholder.svg" ||
                         "/placeholder.svg" ||
                         "/placeholder.svg" ||
                         "/placeholder.svg" ||

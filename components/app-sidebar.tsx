@@ -1,6 +1,6 @@
 "use client"
 
-import { MessagesSquare, Lightbulb, Send, ChevronDown, LogOut } from "lucide-react"
+import { MessagesSquare, Lightbulb, Send, ChevronDown, LogOut, BarChart3 } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -33,6 +33,8 @@ export function AppSidebar() {
     setUser(getUser())
   }, [])
 
+  const canChangeRole = user?.role === "admin" || user?.role === "colaborador"
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -44,8 +46,10 @@ export function AppSidebar() {
         </div>
         <div className="px-2 py-2 border-t">
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <div className="flex items-center gap-2 cursor-pointer p-2 rounded-md hover:bg-sidebar-accent">
+            <DropdownMenuTrigger asChild disabled={!canChangeRole}>
+              <div
+                className={`flex items-center gap-2 p-2 rounded-md ${canChangeRole ? "cursor-pointer hover:bg-sidebar-accent" : "cursor-default"}`}
+              >
                 <Avatar className="h-8 w-8">
                   <AvatarFallback>{user?.name?.slice(0, 2).toUpperCase() || "US"}</AvatarFallback>
                 </Avatar>
@@ -55,32 +59,34 @@ export function AppSidebar() {
                 </div>
               </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
-              <DropdownMenuItem
-                onClick={() => {
-                  setRole("cliente")
-                  setUser(getUser())
-                }}
-              >
-                Tornar Cliente
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  setRole("colaborador")
-                  setUser(getUser())
-                }}
-              >
-                Tornar Colaborador
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  setRole("admin")
-                  setUser(getUser())
-                }}
-              >
-                Tornar Admin
-              </DropdownMenuItem>
-            </DropdownMenuContent>
+            {canChangeRole && (
+              <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuItem
+                  onClick={() => {
+                    setRole("cliente")
+                    setUser(getUser())
+                  }}
+                >
+                  Tornar Cliente
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setRole("colaborador")
+                    setUser(getUser())
+                  }}
+                >
+                  Tornar Colaborador
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setRole("admin")
+                    setUser(getUser())
+                  }}
+                >
+                  Tornar Admin
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            )}
           </DropdownMenu>
         </div>
       </SidebarHeader>
@@ -102,6 +108,7 @@ export function AppSidebar() {
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton asChild>
                           <Link href="/social/overview">
+                            <BarChart3 className="text-[#4b8655]" />
                             <span>Visão Geral</span>
                           </Link>
                         </SidebarMenuSubButton>

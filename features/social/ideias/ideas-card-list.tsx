@@ -12,12 +12,14 @@ import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { bridge } from "@/lib/bridge"
+import { CarrosselPreview } from "./carrossel-preview"
+import { CarrosselModal } from "./carrossel-modal"
 
 export function IdeasCardList({
   items,
   getClienteNome,
   role = "admin",
-  userClienteId, // Adicionando userClienteId para filtro de segurança
+  userClienteId,
   onEdit,
   onDelete,
   onApprove,
@@ -26,7 +28,7 @@ export function IdeasCardList({
   items: Ideia[]
   getClienteNome: (clienteId: string) => string
   role?: UserRole
-  userClienteId?: string | null // Novo parâmetro para filtro de segurança
+  userClienteId?: string | null
   onEdit?: (item: Ideia) => void
   onDelete?: (item: Ideia) => void
   onApprove?: (item: Ideia, comment?: string) => void
@@ -34,6 +36,10 @@ export function IdeasCardList({
 }) {
   const [comments, setComments] = React.useState<Record<string, string>>({})
   const [showAllComments, setShowAllComments] = React.useState<Record<string, boolean>>({})
+  const [carrosselModal, setCarrosselModal] = React.useState<{ aberto: boolean; ideiaId: string | null }>({
+    aberto: false,
+    ideiaId: null,
+  })
   const { toast } = useToast()
 
   const isClient = role === "cliente"
@@ -42,10 +48,14 @@ export function IdeasCardList({
 
   const filteredItems = React.useMemo(() => {
     if (isClient && userClienteId) {
-      // Para clientes: mostrar apenas itens do próprio cliente
-      return items.filter((item) => item.cliente_id === userClienteId)
+      return items.filter(
+        (item) =>
+          item.cliente_id === userClienteId &&
+          item.status !== "em rascunho" &&
+          item.status !== "rascunho" &&
+          item.status !== "draft",
+      )
     }
-    // Para admin/colaborador: mostrar todos os itens
     return items
   }, [items, isClient, userClienteId])
 
@@ -53,6 +63,16 @@ export function IdeasCardList({
   const [delTarget, setDelTarget] = React.useState<Ideia | null>(null)
   const [confirmStep, setConfirmStep] = React.useState<0 | 1 | 2>(0)
   const [confirmTitle, setConfirmTitle] = React.useState<string>("")
+
+  const handleVerTudoCarrossel = (ideiaId: string) => {
+    setCarrosselModal({ aberto: true, ideiaId })
+  }
+
+  const handleFecharCarrosselModal = () => {
+    setCarrosselModal({ aberto: false, ideiaId: null })
+  }
+
+  const ideiaCarrosselModal = carrosselModal.ideiaId ? filteredItems.find((i) => i.id === carrosselModal.ideiaId) : null
 
   return (
     <>
@@ -116,19 +136,33 @@ export function IdeasCardList({
 
               <div className="text-sm mb-2">
                 <div className="font-medium">Ideia</div>
-                <div className="text-muted-foreground font-bold">{i.ideia || "—"}</div>
+                {i.formato === "Carrossel" ? (
+                  <CarrosselPreview textoCompleto={i.ideia || ""} onVerTudo={() => handleVerTudoCarrossel(i.id)} />
+                ) : (
+                  <div className="text-muted-foreground font-bold max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
+                    {i.ideia || "—"}
+                  </div>
+                )}
               </div>
 
               {i.formato === "Reels" && i.roteiro ? (
                 <div className="text-sm mb-2">
                   <div className="font-medium">Roteiro</div>
-                  <div className="text-muted-foreground whitespace-pre-wrap font-bold">{i.roteiro}</div>
+                  <div className="text-muted-foreground max-w-full overflow-x-hidden whitespace-pre-wrap break-words font-bold">
+                    {i.roteiro}
+                  </div>
                 </div>
               ) : null}
 
               <div className="text-sm mb-2">
                 <div className="font-medium">Legenda</div>
-                <div className="text-muted-foreground font-bold">{i.legenda || "—"}</div>
+                {i.formato === "Carrossel" ? (
+                  <CarrosselPreview textoCompleto={i.legenda || ""} onVerTudo={() => handleVerTudoCarrossel(i.id)} />
+                ) : (
+                  <div className="text-muted-foreground font-bold max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
+                    {i.legenda || "—"}
+                  </div>
+                )}
               </div>
 
               {canSeeComments && comentariosCount > 0 ? (
@@ -143,7 +177,9 @@ export function IdeasCardList({
                             : ""}
                         </span>
                       </div>
-                      <div className="whitespace-pre-wrap">{lastComment?.texto || ""}</div>
+                      <div className="max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
+                        {lastComment?.texto || ""}
+                      </div>
                       {comentariosCount > 1 ? (
                         <div className="mt-2">
                           <button
@@ -164,7 +200,9 @@ export function IdeasCardList({
                             <span className="font-medium">{c.autor || "Comentário"}</span>{" "}
                             <span>{c.created_at ? "— " + new Date(c.created_at).toLocaleString("pt-BR") : ""}</span>
                           </div>
-                          <div className="whitespace-pre-wrap">{c.texto || ""}</div>
+                          <div className="max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
+                            {c.texto || ""}
+                          </div>
                         </div>
                       ))}
                       <div className="pt-1">
@@ -197,7 +235,7 @@ export function IdeasCardList({
                       href={String(i.referencia)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[#4b8655] underline break-all"
+                      className="text-[#4b8655] underline max-w-full overflow-x-hidden break-all"
                     >
                       {String(i.referencia)}
                     </a>
@@ -251,7 +289,14 @@ export function IdeasCardList({
         })}
       </div>
 
-      {/* Confirmação dupla de exclusão */}
+      {ideiaCarrosselModal && (
+        <CarrosselModal
+          aberto={carrosselModal.aberto}
+          textoCompleto={ideiaCarrosselModal.ideia || ideiaCarrosselModal.legenda || ""}
+          onClose={handleFecharCarrosselModal}
+        />
+      )}
+
       <Dialog
         open={!!delTarget && confirmStep === 1}
         onOpenChange={(o) => {

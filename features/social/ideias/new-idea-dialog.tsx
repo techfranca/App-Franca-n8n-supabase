@@ -119,9 +119,11 @@ export function NewIdeaDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-[#7de08d] text-[#081534] hover:bg-[#4b8655] font-sans text-sm">{triggerLabel}</Button>
+        <Button className="bg-[#7de08d] text-[#081534] hover:bg-[#4b8655] font-montserrat text-sm">
+          {triggerLabel}
+        </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto font-sans">
+      <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto font-montserrat">
         <DialogHeader className="pb-4">
           <DialogTitle className="text-xl font-semibold text-[#081534]">Nova Ideia</DialogTitle>
         </DialogHeader>
@@ -137,12 +139,12 @@ export function NewIdeaDialog({
                   value={(data.cliente_id as string) || ""}
                   onValueChange={(v) => setData((d) => ({ ...d, cliente_id: v }))}
                 >
-                  <SelectTrigger className="h-11 text-sm font-sans font-bold">
+                  <SelectTrigger className="h-11 text-sm font-montserrat font-bold">
                     <SelectValue placeholder="Selecione um cliente" />
                   </SelectTrigger>
-                  <SelectContent className="font-sans">
+                  <SelectContent className="font-montserrat">
                     {clientes.map((c) => (
-                      <SelectItem key={c.id} value={c.id} className="text-sm font-sans font-bold">
+                      <SelectItem key={c.id} value={c.id} className="text-sm font-montserrat font-bold">
                         {c.nome}
                       </SelectItem>
                     ))}
@@ -153,7 +155,7 @@ export function NewIdeaDialog({
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#081534]">Título *</Label>
                 <Input
-                  className="h-11 text-sm font-sans font-bold"
+                  className="h-11 text-sm font-montserrat font-bold"
                   value={data.titulo ?? ""}
                   onChange={(e) => setData((d) => ({ ...d, titulo: e.target.value }))}
                   placeholder="Digite o título da ideia"
@@ -168,12 +170,12 @@ export function NewIdeaDialog({
                   value={(data.plataforma as any) ?? "Instagram"}
                   onValueChange={(v) => setData((d) => ({ ...d, plataforma: v as any }))}
                 >
-                  <SelectTrigger className="h-11 text-sm font-sans font-bold">
+                  <SelectTrigger className="h-11 text-sm font-montserrat font-bold">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="font-sans">
+                  <SelectContent className="font-montserrat">
                     {plataformas.map((p) => (
-                      <SelectItem key={p} value={p} className="text-sm font-sans font-bold">
+                      <SelectItem key={p} value={p} className="text-sm font-montserrat font-bold">
                         {p}
                       </SelectItem>
                     ))}
@@ -187,12 +189,12 @@ export function NewIdeaDialog({
                   value={(data.formato as any) ?? "Reels"}
                   onValueChange={(v) => setData((d) => ({ ...d, formato: v as any }))}
                 >
-                  <SelectTrigger className="h-11 text-sm font-sans font-bold">
+                  <SelectTrigger className="h-11 text-sm font-montserrat font-bold">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="font-sans">
+                  <SelectContent className="font-montserrat">
                     {formatos.map((f) => (
-                      <SelectItem key={f} value={f} className="text-sm font-sans font-bold">
+                      <SelectItem key={f} value={f} className="text-sm font-montserrat font-bold">
                         {f}
                       </SelectItem>
                     ))}
@@ -203,7 +205,7 @@ export function NewIdeaDialog({
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#081534]">CTA</Label>
                 <Input
-                  className="h-11 text-sm font-sans font-bold"
+                  className="h-11 text-sm font-montserrat font-bold"
                   value={data.cta ?? ""}
                   onChange={(e) => setData((d) => ({ ...d, cta: e.target.value }))}
                   placeholder="Call to action"
@@ -219,7 +221,7 @@ export function NewIdeaDialog({
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#081534]">Ideia</Label>
                 <Textarea
-                  className="min-h-[100px] resize-none text-sm font-sans font-bold"
+                  className="min-h-[100px] resize-none text-sm font-montserrat font-bold"
                   value={data.ideia ?? ""}
                   onChange={(e) => setData((d) => ({ ...d, ideia: e.target.value }))}
                   placeholder="Descreva sua ideia..."
@@ -229,7 +231,7 @@ export function NewIdeaDialog({
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#081534]">Legenda</Label>
                 <Textarea
-                  className="min-h-[100px] resize-none text-sm font-sans font-bold"
+                  className="min-h-[100px] resize-none text-sm font-montserrat font-bold"
                   value={data.legenda ?? ""}
                   onChange={(e) => setData((d) => ({ ...d, legenda: e.target.value }))}
                   placeholder="Escreva a legenda..."
@@ -241,7 +243,7 @@ export function NewIdeaDialog({
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#081534]">Roteiro</Label>
                 <Textarea
-                  className="min-h-[80px] resize-none text-sm font-sans font-bold"
+                  className="min-h-[80px] resize-none text-sm font-montserrat font-bold"
                   value={data.roteiro ?? ""}
                   onChange={(e) => setData((d) => ({ ...d, roteiro: e.target.value }))}
                   placeholder="Descreva o roteiro do Reels..."
@@ -253,7 +255,7 @@ export function NewIdeaDialog({
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#081534]">Hashtags</Label>
                 <Input
-                  className="h-11 text-sm font-sans font-bold"
+                  className="h-11 text-sm font-montserrat font-bold"
                   value={data.hashtags ?? ""}
                   onChange={(e) => setData((d) => ({ ...d, hashtags: e.target.value }))}
                   placeholder="#hashtag1 #hashtag2"
@@ -263,7 +265,7 @@ export function NewIdeaDialog({
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#081534]">Referência (URL)</Label>
                 <Input
-                  className="h-11 text-sm font-sans font-bold"
+                  className="h-11 text-sm font-montserrat font-bold"
                   value={data.referencia ?? ""}
                   onChange={(e) => setData((d) => ({ ...d, referencia: e.target.value }))}
                   placeholder="https://exemplo.com"
@@ -274,7 +276,7 @@ export function NewIdeaDialog({
             <div className="space-y-2">
               <Label className="text-sm font-medium text-[#081534]">Objetivo</Label>
               <Textarea
-                className="min-h-[80px] resize-none text-sm font-sans font-bold"
+                className="min-h-[80px] resize-none text-sm font-montserrat font-bold"
                 value={data.objetivo ?? ""}
                 onChange={(e) => setData((d) => ({ ...d, objetivo: e.target.value }))}
                 placeholder="Qual o objetivo desta ideia?"
@@ -294,7 +296,7 @@ export function NewIdeaDialog({
                       <Button
                         variant="outline"
                         className={cn(
-                          "w-full justify-start text-left font-normal text-sm font-sans font-bold",
+                          "w-full justify-start text-left font-normal text-sm font-montserrat font-bold",
                           !dataAprovacao && "text-muted-foreground",
                         )}
                       >
@@ -309,14 +311,14 @@ export function NewIdeaDialog({
                         onSelect={setDataAprovacao}
                         initialFocus
                         locale={ptBR}
-                        className="rounded-md border shadow-lg bg-white font-sans"
+                        className="rounded-md border shadow-lg bg-white font-montserrat"
                       />
                     </PopoverContent>
                   </Popover>
                   <div className="relative">
                     <Input
                       type="time"
-                      className="w-full text-sm h-11 pr-10 font-sans font-bold"
+                      className="w-full text-sm h-11 pr-10 font-montserrat font-bold"
                       value={horaAprovacao}
                       onChange={(e) => setHoraAprovacao(e.target.value)}
                     />
@@ -334,7 +336,7 @@ export function NewIdeaDialog({
                       <Button
                         variant="outline"
                         className={cn(
-                          "w-full justify-start text-left font-normal text-sm font-sans font-bold",
+                          "w-full justify-start text-left font-normal text-sm font-montserrat font-bold",
                           !dataPostagem && "text-muted-foreground",
                         )}
                       >
@@ -349,14 +351,14 @@ export function NewIdeaDialog({
                         onSelect={setDataPostagem}
                         initialFocus
                         locale={ptBR}
-                        className="rounded-md border shadow-lg bg-white font-sans"
+                        className="rounded-md border shadow-lg bg-white font-montserrat"
                       />
                     </PopoverContent>
                   </Popover>
                   <div className="relative">
                     <Input
                       type="time"
-                      className="w-full text-sm h-11 pr-10 font-sans font-bold"
+                      className="w-full text-sm h-11 pr-10 font-montserrat font-bold"
                       value={horaPostagem}
                       onChange={(e) => setHoraPostagem(e.target.value)}
                     />
@@ -372,12 +374,12 @@ export function NewIdeaDialog({
               variant="outline"
               onClick={() => create("rascunho")}
               disabled={pending}
-              className="px-6 text-sm font-sans"
+              className="px-6 text-sm font-montserrat"
             >
               {pending ? "Salvando..." : "Salvar rascunho"}
             </Button>
             <Button
-              className="bg-[#7de08d] text-[#081534] hover:bg-[#4b8655] px-6 text-sm font-sans"
+              className="bg-[#7de08d] text-[#081534] hover:bg-[#4b8655] px-6 text-sm font-montserrat"
               onClick={() => create(isCliente ? "rascunho" : "ideia_em_aprovacao")}
               disabled={pending}
             >

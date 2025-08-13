@@ -3,7 +3,7 @@
 import * as React from "react"
 import { PageShell } from "@/components/page-shell"
 import { useAppState, useClientes } from "@/stores/app-state"
-import type { Ideia } from "@/lib/types"
+import type { Ideia, Formato, Plataforma } from "@/lib/types"
 import { IdeaDrawer } from "@/features/social/ideias/idea-drawer"
 import { NewIdeaDialog } from "@/features/social/ideias/new-idea-dialog"
 import { useToast } from "@/hooks/use-toast"
@@ -20,6 +20,10 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "lucide-react"
 import { addMonths } from "date-fns"
 import { Separator } from "@/components/ui/separator"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+const formatos: Formato[] = ["Reels", "Carrossel", "Imagem única", "Stories", "Outro"]
+const plataformas: Plataforma[] = ["Instagram", "Facebook", "TikTok", "YouTube", "LinkedIn"]
 
 function MonthPicker({
   value,
@@ -56,13 +60,14 @@ export default function IdeiasPage() {
 
   const isClient = user?.role === "cliente"
   const canCreate = user?.role === "admin" || user?.role === "colaborador"
+  const canUseAdvancedFilters = user?.role === "admin" || user?.role === "colaborador"
 
-  // Para administradores, o cliente efetivo é o que está selecionado no estado.
-  // Para clientes, é sempre o seu próprio cliente, garantido pelo AuthGuard.
   const effectiveCliente = cliente
 
   const [items, setItems] = React.useState<Ideia[]>([])
   const [localFilter, setLocalFilter] = React.useState("")
+  const [formatoFilter, setFormatoFilter] = React.useState<string>("todos")
+  const [plataformaFilter, setPlataformaFilter] = React.useState<string>("todos")
   const [selected, setSelected] = React.useState<Ideia | null>(null)
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(true)
@@ -70,16 +75,12 @@ export default function IdeiasPage() {
   const clienteIdForFetch = user?.role === "cliente" ? user.cliente_id : (cliente?.id ?? null)
 
   const refetch = React.useCallback(async () => {
-    // Lógica de segurança: determina o ID do cliente para a busca.
-    // Se for um cliente, usa o seu próprio `cliente_id`.
-    // Se for admin/colaborador, usa o cliente selecionado no combobox (que pode ser null para ver todos).
     console.log("=== DEBUG IDEIAS ===")
     console.log("User role:", user?.role)
     console.log("User cliente_id:", user?.cliente_id)
     console.log("Cliente selecionado:", cliente?.id)
     console.log("clienteIdForFetch:", clienteIdForFetch)
 
-    // Um cliente nunca deve buscar sem um ID.
     if (user?.role === "cliente" && !clienteIdForFetch) {
       console.log("Cliente sem ID - retornando lista vazia")
       setItems([])
@@ -118,19 +119,23 @@ export default function IdeiasPage() {
   }, [refetch, user])
 
   const filtered = React.useMemo(() => {
+    let result = items
+
     const q = localFilter.toLowerCase().trim()
-    if (!q) return items
-    return items.filter((i) => [i.titulo, i.ideia, i.legenda].some((f) => (f ?? "").toLowerCase().includes(q)))
-  }, [items, localFilter])
+    if (q) {
+      result = result.filter((i) => [i.titulo, i.ideia, i.legenda].some((f) => (f ?? "").toLowerCase().includes(q)))
+    }
 
-  function onEdit(row: Ideia) {
-    setSelected(row)
-    setOpen(true)
-  }
+    if (formatoFilter !== "todos") {
+      result = result.filter((i) => i.formato === formatoFilter)
+    }
 
-  async function onDelete(row: Ideia) {
-    setItems((p) => p.filter((i) => i.id !== row.id))
-  }
+    if (plataformaFilter !== "todos") {
+      result = result.filter((i) => i.plataforma === plataformaFilter)
+    }
+
+    return result
+  }, [items, localFilter, formatoFilter, plataformaFilter])
 
   const getClienteNome = React.useCallback((id: string) => clientes.find((c) => c.id === id)?.nome ?? "—", [clientes])
 
@@ -179,11 +184,18 @@ export default function IdeiasPage() {
     }
   }
 
+  function onEdit(row: Ideia) {
+    setSelected(row)
+    setOpen(true)
+  }
+
+  async function onDelete(row: Ideia) {
+    setItems((p) => p.filter((i) => i.id !== row.id))
+  }
+
   return (
     <PageShell title="Social Media · Ideias">
-      
-
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
         <ClientCombobox
           clientes={clientes}
           value={cliente?.id ?? null}
@@ -203,6 +215,36 @@ export default function IdeiasPage() {
           onChange={(e) => setLocalFilter(e.target.value)}
           className="max-w-xs"
         />
+        {canUseAdvancedFilters && (
+          <>
+            <Select value={formatoFilter} onValueChange={setFormatoFilter}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Formato" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos formatos</SelectItem>
+                {formatos.map((formato) => (
+                  <SelectItem key={formato} value={formato}>
+                    {formato}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={plataformaFilter} onValueChange={setPlataformaFilter}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Plataforma" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todas plataformas</SelectItem>
+                {plataformas.map((plataforma) => (
+                  <SelectItem key={plataforma} value={plataforma}>
+                    {plataforma}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        )}
         <div className="ml-auto">
           {canCreate && <NewIdeaDialog clienteId={effectiveCliente?.id ?? null} onCreated={refetch} />}
         </div>
@@ -217,7 +259,7 @@ export default function IdeiasPage() {
           items={filtered}
           getClienteNome={getClienteNome}
           role={user?.role}
-          userClienteId={user?.cliente_id} // Adicionando userClienteId para filtro de segurança
+          userClienteId={user?.cliente_id}
           onEdit={!isClient ? onEdit : undefined}
           onDelete={!isClient ? onDelete : undefined}
           onApprove={isClient ? approve : undefined}
