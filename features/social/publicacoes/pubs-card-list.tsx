@@ -404,6 +404,11 @@ export function PubsCardList({
 
               <div className="mb-2">
                 <StatusBadge status={p.status} map="publicacao" />
+                {p.nota && (
+                  <div className="inline-flex items-center gap-1 ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
+                    ⭐ {p.nota}/10
+                  </div>
+                )}
               </div>
 
               <MediaBox p={p} />
@@ -752,6 +757,7 @@ export function PubsCardList({
                       src={
                         publicUrlFromPath(preview.pub.midia_urls[preview.index]) ||
                         "/placeholder.svg?height=300&width=600&query=preview-da-midia-da-publicacao" ||
+                        "/placeholder.svg" ||
                         "/placeholder.svg" ||
                         "/placeholder.svg" ||
                         "/placeholder.svg" ||

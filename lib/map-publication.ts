@@ -161,6 +161,8 @@ export function normalizePublication(input: any, fallbackStatus: Publicacao["sta
   const comentarios = parseComentarios(input?.comentarios)
   const created_at = String(input?.created_at ?? input?.createdAt ?? new Date().toISOString())
 
+  const nota = input?.nota ? Number(input.nota) : null
+
   return {
     id,
     cliente_id,
@@ -178,5 +180,6 @@ export function normalizePublication(input: any, fallbackStatus: Publicacao["sta
     link_publicado: link_publicado ?? null,
     comentarios,
     created_at,
+    nota, // Incluindo campo nota no objeto retornado
   }
 }

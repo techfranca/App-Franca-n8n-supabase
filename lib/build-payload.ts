@@ -55,7 +55,7 @@ export function buildIdeaUpdatePayload(idea: Ideia, extra?: { comentario?: strin
 
 export function buildPublicationUpdatePayload(
   pub: Publicacao,
-  extra?: { comentario?: string; status?: Publicacao["status"] },
+  extra?: { comentario?: string; status?: Publicacao["status"]; nota?: number },
 ) {
   const nowISO = new Date().toISOString()
   const nextStatus = extra?.status ?? pub.status
@@ -98,6 +98,7 @@ export function buildPublicationUpdatePayload(
     dataAgendada: dataAgendadaISO,
 
     comentario: extra?.comentario ?? "",
+    nota: extra?.nota ?? null,
   }
 }
 
