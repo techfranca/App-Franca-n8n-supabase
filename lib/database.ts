@@ -27,7 +27,7 @@ export const TODOS_OS_CLIENTES: Cliente[] = [
 // --- 2. LISTA DE TODOS OS USUÁRIOS DO SISTEMA ---
 // Esta lista substitui a autenticação e a tabela 'profiles' do Supabase.
 export const TODOS_OS_USUARIOS: AuthUser[] = [
-  // Administrador
+  // Administradores
   {
     id: "user_gabriel",
     email: "gabriel",
@@ -35,6 +35,38 @@ export const TODOS_OS_USUARIOS: AuthUser[] = [
     name: "Gabriel (administrador)",
     role: "admin",
     cliente_id: null, // Admin não tem cliente_id
+  },
+  {
+    id: "user_bruna",
+    email: "bruna",
+    password: "bruna123",
+    name: "Bruna (administrador)",
+    role: "admin",
+    cliente_id: null,
+  },
+  {
+    id: "user_leonardo",
+    email: "leonardo",
+    password: "leonardo123",
+    name: "Leonardo (administrador)",
+    role: "admin",
+    cliente_id: null,
+  },
+  {
+    id: "user_guilherme",
+    email: "guilherme",
+    password: "guilherme123",
+    name: "Guilherme (administrador)",
+    role: "admin",
+    cliente_id: null,
+  },
+  {
+    id: "user_davidson",
+    email: "davidson",
+    password: "davidson123",
+    name: "Davidson (administrador)",
+    role: "admin",
+    cliente_id: null,
   },
   // Clientes Comuns
   {
