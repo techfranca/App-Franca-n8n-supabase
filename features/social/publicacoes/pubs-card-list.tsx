@@ -247,16 +247,7 @@ export function PubsCardList({
               />
             )
           ) : (
-            <div className="text-xs text-muted-foreground">
-              Sem mídia detectada
-              <div className="text-[10px] mt-1 opacity-50 bg-red-50 p-1 rounded">
-                Debug: paths={mediaPaths.length}, url="{url}", broken={broken.toString()}
-                <br />
-                Raw midia_urls: {JSON.stringify(p.midia_urls)}
-                <br />
-                Raw midia_url: {JSON.stringify(p.midia_url)}
-              </div>
-            </div>
+            <div className="text-xs text-muted-foreground">Midia em desenvolvimento</div>
           )}
         </div>
         {mediaCount > 1 ? (
@@ -810,13 +801,6 @@ export function PubsCardList({
                       src={
                         publicUrlFromPath(preview.pub.midia_urls[preview.index]) ||
                         "/placeholder.svg?height=300&width=600&query=preview-da-midia-da-publicacao" ||
-                        "/placeholder.svg" ||
-                        "/placeholder.svg" ||
-                        "/placeholder.svg" ||
-                        "/placeholder.svg" ||
-                        "/placeholder.svg" ||
-                        "/placeholder.svg" ||
-                        "/placeholder.svg" ||
                         "/placeholder.svg" ||
                         "/placeholder.svg"
                       }
