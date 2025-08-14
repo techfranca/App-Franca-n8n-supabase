@@ -48,9 +48,11 @@ export interface Ideia {
   legenda?: string
   data_aprovacao?: string | null // YYYY-MM-DD
   data_publicacao?: string | null // YYYY-MM-DD
+  data_publicacao_completa?: string | null // ISO com data e hora completas
   status: IdeiaStatus
   needs_reapproval?: boolean
   comentarios?: { autor: string; texto: string; created_at: string }[]
+  comentarios_artes?: { arte_index: number; comentario: string }[]
   created_at: string
 }
 
@@ -62,7 +64,6 @@ export interface Publicacao {
   plataforma: Plataforma
   formato: Formato
   legenda?: string
-  // Suporte a múltiplas mídias e capa (opcional, compatível com implementações antigas)
   midia_url?: string | null // Compatibilidade (primeira mídia)
   midia_urls?: string[] // NOVO: lista completa de mídias (imagens/vídeos)
   cover_url?: string | null // NOVO: capa (imagem) para vídeo/carrocel

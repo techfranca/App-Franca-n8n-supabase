@@ -4,7 +4,7 @@ import * as React from "react"
 import type { Ideia, UserRole } from "@/lib/types"
 import { PlatformIcon } from "@/features/shared/platform-icon"
 import { StatusBadge } from "@/features/shared/status-badge"
-import { CalendarDays, MessageSquare, Pencil, Trash2 } from "lucide-react"
+import { CalendarDays, MessageSquare, Pencil, Trash2, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
@@ -40,6 +40,7 @@ export function IdeasCardList({
   const [showAllComments, setShowAllComments] = React.useState<Record<string, boolean>>({})
   const [isProcessing, setIsProcessing] = React.useState(false)
   const [localItems, setLocalItems] = React.useState<Ideia[]>([])
+  const [comentariosArtes, setComentariosArtes] = React.useState<Record<string, Record<string, string>>>({})
   const [carrosselModal, setCarrosselModal] = React.useState<{
     aberto: boolean
     ideiaId: string | null
@@ -110,6 +111,16 @@ export function IdeasCardList({
     setCarrosselModal({ aberto: false, ideiaId: null, tipo: "ideia" })
   }
 
+  const handleComentarioArteChange = (ideiaId: string, arteIndex: number, comentario: string) => {
+    setComentariosArtes((prev) => ({
+      ...prev,
+      [ideiaId]: {
+        ...prev[ideiaId],
+        [arteIndex]: comentario,
+      },
+    }))
+  }
+
   const handleApprove = async (ideia: Ideia, comment: string) => {
     if (isProcessing) return
     setIsProcessing(true)
@@ -164,11 +175,20 @@ export function IdeasCardList({
     setIsProcessing(true)
 
     try {
+      const comentariosArtesIdeia = comentariosArtes[ideia.id] || {}
+      const comentariosArtesArray = Object.entries(comentariosArtesIdeia)
+        .filter(([_, comentario]) => comentario.trim())
+        .map(([arteIndex, comentario]) => ({
+          arte_index: Number.parseInt(arteIndex),
+          comentario: comentario.trim(),
+        }))
+
       if (tipo === "ajustar") {
         await bridge("ideias", "update_ajustar", {
           ...ideia,
           status: "ideia_em_alteracao",
           comentario: comentario,
+          comentarios_artes: comentariosArtesArray, // Enviando comentários das artes
           comentarios: [
             ...(ideia.comentarios || []),
             {
@@ -195,6 +215,7 @@ export function IdeasCardList({
           ...ideia,
           status: "reprovada",
           comentario: comentario,
+          comentarios_artes: comentariosArtesArray, // Enviando comentários das artes
           comentarios: [
             ...(ideia.comentarios || []),
             {
@@ -240,11 +261,20 @@ export function IdeasCardList({
     setIsProcessing(true)
 
     try {
+      const comentariosArtesIdeia = comentariosArtes[ideia.id] || {}
+      const comentariosArtesArray = Object.entries(comentariosArtesIdeia)
+        .filter(([_, comentario]) => comentario.trim())
+        .map(([arteIndex, comentario]) => ({
+          arte_index: Number.parseInt(arteIndex),
+          comentario: comentario.trim(),
+        }))
+
       if (tipo === "ajustar") {
         await bridge("ideias", "update_ajustar", {
           ...ideia,
           status: "ideia_em_alteracao",
           comentario: comentario,
+          comentarios_artes: comentariosArtesArray, // Enviando comentários das artes
           comentarios: [
             ...(ideia.comentarios || []),
             {
@@ -271,6 +301,7 @@ export function IdeasCardList({
           ...ideia,
           status: "reprovada",
           comentario: comentario,
+          comentarios_artes: comentariosArtesArray, // Enviando comentários das artes
           comentarios: [
             ...(ideia.comentarios || []),
             {
@@ -305,6 +336,11 @@ export function IdeasCardList({
   }
 
   const ideiaCarrosselModal = carrosselModal.ideiaId ? filteredItems.find((i) => i.id === carrosselModal.ideiaId) : null
+
+  const hasArtComments = (ideiaId: string): boolean => {
+    const comentariosArtesIdeia = comentariosArtes[ideiaId] || {}
+    return Object.values(comentariosArtesIdeia).some((comentario) => comentario.trim().length > 0)
+  }
 
   return (
     <>
@@ -357,6 +393,15 @@ export function IdeasCardList({
               <div className="flex items-center gap-2 mb-2">
                 <PlatformIcon platform={i.plataforma} className="h-5 w-5 text-[#4b8655]" />
                 <span className="text-xs rounded bg-slate-100 px-2 py-0.5">{i.formato}</span>
+                {i.data_publicacao_completa && (
+                  <span className="text-xs rounded bg-blue-100 text-blue-800 px-2 py-0.5 flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {new Date(i.data_publicacao_completa).toLocaleTimeString("pt-BR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                )}
               </div>
 
               <div className="text-base font-semibold mb-1">{i.titulo}</div>
@@ -436,7 +481,7 @@ export function IdeasCardList({
                             <span className="font-medium">{c.autor || "Comentário"}</span>{" "}
                             <span>{c.created_at ? "— " + new Date(c.created_at).toLocaleString("pt-BR") : ""}</span>
                           </div>
-                          <div className="max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
+                          <div className="text-sm text-gray-700 max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
                             {c.texto || ""}
                           </div>
                         </div>
@@ -452,6 +497,30 @@ export function IdeasCardList({
                       </div>
                     </div>
                   )}
+                </div>
+              ) : null}
+
+              {canEdit &&
+              (i.status === "ideia_em_alteracao" || i.status === "reprovada") &&
+              i.comentarios_artes &&
+              i.comentarios_artes.length > 0 ? (
+                <div className="mb-2 rounded border bg-orange-50 border-orange-200 p-3">
+                  <div className="text-sm font-medium text-orange-800 mb-2 flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Comentários das Artes
+                  </div>
+                  <div className="space-y-2">
+                    {i.comentarios_artes.map((comentarioArte, idx) => (
+                      <div key={idx} className="bg-white rounded border border-orange-200 p-2">
+                        <div className="text-xs font-medium text-orange-700 mb-1">
+                          Arte {comentarioArte.arte_index + 1}
+                        </div>
+                        <div className="text-sm text-gray-700 max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
+                          {comentarioArte.comentario}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : null}
 
@@ -512,7 +581,7 @@ export function IdeasCardList({
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
-                        if (comment.trim()) {
+                        if (comment.trim() || hasArtComments(i.id)) {
                           setConfirmDialog({
                             aberto: true,
                             tipo: "ajustar",
@@ -537,7 +606,7 @@ export function IdeasCardList({
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
-                        if (comment.trim()) {
+                        if (comment.trim() || hasArtComments(i.id)) {
                           setConfirmDialog({
                             aberto: true,
                             tipo: "reprovar",
@@ -571,6 +640,10 @@ export function IdeasCardList({
             carrosselModal.tipo === "legenda" ? ideiaCarrosselModal.legenda || "" : ideiaCarrosselModal.ideia || ""
           }
           onClose={handleFecharCarrosselModal}
+          comentariosArtes={comentariosArtes[ideiaCarrosselModal.id] || {}}
+          onComentarioArteChange={(arteIndex, comentario) =>
+            handleComentarioArteChange(ideiaCarrosselModal.id, arteIndex, comentario)
+          }
         />
       )}
 

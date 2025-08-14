@@ -12,6 +12,17 @@ function toYMD(isoOrDate?: string | Date | null): string | null {
   }
 }
 
+function toDateTime(isoOrDate?: string | Date | null): string | null {
+  if (!isoOrDate) return null
+  try {
+    const d = typeof isoOrDate === "string" ? new Date(isoOrDate) : isoOrDate
+    if (isNaN(d.getTime())) return null
+    return d.toISOString()
+  } catch {
+    return null
+  }
+}
+
 function normalizeStr(v?: unknown): string {
   return String(v ?? "").trim()
 }
@@ -91,6 +102,15 @@ export function normalizeIdea(input: any, fallbackStatus: IdeiaStatus = "rascunh
       null,
   )
 
+  const data_publicacao_completa = toDateTime(
+    input?.data_publicacao ??
+      input?.dataPostagem ??
+      input?.datapostagem ??
+      input?.dataPublicacao ??
+      input?.data_publicacao_prevista ??
+      null,
+  )
+
   // Status
   const status: IdeiaStatus = mapInboundIdeaStatus(input?.status, fallbackStatus)
 
@@ -104,6 +124,16 @@ export function normalizeIdea(input: any, fallbackStatus: IdeiaStatus = "rascunh
     comentarios = input.comentarios
   } else if (typeof input?.comentario === "string" && input.comentario.trim()) {
     comentarios = [{ autor: "Cliente", texto: String(input.comentario), created_at: new Date().toISOString() }]
+  }
+
+  let comentarios_artes: { arte_index: number; comentario: string }[] = []
+  if (Array.isArray(input?.comentarios_artes)) {
+    comentarios_artes = input.comentarios_artes
+      .map((item: any) => ({
+        arte_index: Number(item?.arte_index ?? 0),
+        comentario: String(item?.comentario ?? "").trim(),
+      }))
+      .filter((item: any) => item.comentario) // Remove comentários vazios
   }
 
   return {
@@ -122,9 +152,11 @@ export function normalizeIdea(input: any, fallbackStatus: IdeiaStatus = "rascunh
     legenda,
     data_aprovacao,
     data_publicacao,
+    data_publicacao_completa, // Adicionando campo com data/hora completa
     status,
     needs_reapproval: Boolean(input?.needs_reapproval ?? false),
     comentarios,
+    comentarios_artes,
     created_at,
   }
 }

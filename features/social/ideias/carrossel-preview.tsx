@@ -13,7 +13,7 @@ export function CarrosselPreview({ textoCompleto, onVerTudo, textoVerTudo = "Ver
   const { total, secoes } = parseArtes(textoCompleto)
 
   // Se não há conteúdo suficiente, não mostra preview especial
-  if (!textoCompleto?.trim() || textoCompleto.length < 100) {
+  if (!textoCompleto?.trim() || textoCompleto.length < 20) {
     return <div className="text-muted-foreground font-bold">{textoCompleto || "—"}</div>
   }
 

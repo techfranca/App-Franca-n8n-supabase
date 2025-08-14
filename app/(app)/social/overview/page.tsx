@@ -40,6 +40,8 @@ export default function SocialOverviewPage() {
               { label: "Em aprovação", value: data?.statusIdeias?.ideia_em_aprovacao ?? 0 },
               { label: "Em design", value: data?.statusIdeias?.em_design ?? 0 },
               { label: "Aprovada", value: data?.statusIdeias?.aprovada ?? 0 },
+              { label: "Em alteração", value: data?.statusIdeias?.ideia_em_alteracao ?? 0 },
+              { label: "Reprovada", value: data?.statusIdeias?.reprovada ?? 0 },
             ]}
           />
           <StatusPanel
@@ -48,6 +50,7 @@ export default function SocialOverviewPage() {
               { label: "Em aprovação", value: data?.statusPublicacoes?.publicacao_em_aprovacao ?? 0 },
               { label: "Agendada", value: data?.statusPublicacoes?.agendada ?? 0 },
               { label: "Publicada", value: data?.statusPublicacoes?.publicada ?? 0 },
+              { label: "Em design", value: data?.statusPublicacoes?.em_design ?? 0 },
             ]}
           />
         </div>
