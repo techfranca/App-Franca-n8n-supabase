@@ -43,9 +43,10 @@ function mapInboundIdeaStatus(raw: unknown, fallback: IdeiaStatus): IdeiaStatus 
     case "ideia_em_alteracao":
     case "em_alteracao":
     case "nao_aprovada":
+      return "ideia_em_alteracao"
     case "reprovada":
     case "reprovado":
-      return "ideia_em_alteracao"
+      return "reprovada"
     case "em_design":
     case "aprovada":
     case "aprovado":

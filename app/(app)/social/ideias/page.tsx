@@ -216,6 +216,12 @@ export default function IdeiasPage() {
     setItems((p) => p.filter((i) => i.id !== row.id))
   }
 
+  const handleStatusChange = React.useCallback((ideiaId: string, newStatus: string) => {
+    setItems((prevItems) =>
+      prevItems.map((item) => (item.id === ideiaId ? { ...item, status: newStatus as any } : item)),
+    )
+  }, [])
+
   return (
     <PageShell title="Social Media · Ideias">
       <div className="flex items-center gap-3 mb-6 flex-wrap">
@@ -299,6 +305,7 @@ export default function IdeiasPage() {
           onDelete={!isClient ? onDelete : undefined}
           onApprove={isClient ? approve : undefined}
           onReject={isClient ? reject : undefined}
+          onStatusChange={handleStatusChange} // Passando callback para atualizar status em tempo real
         />
       )}
 

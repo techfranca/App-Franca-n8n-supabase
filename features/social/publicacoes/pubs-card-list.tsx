@@ -64,6 +64,8 @@ export function PubsCardList({
   const [ratingDialog, setRatingDialog] = React.useState<{ pub: Publicacao; comment: string } | null>(null)
   const [selectedRating, setSelectedRating] = React.useState<number>(0)
 
+  const [publishUrlDialog, setPublishUrlDialog] = React.useState<{ pub: Publicacao; url: string } | null>(null)
+
   const [delTarget, setDelTarget] = React.useState<Publicacao | null>(null)
   const [confirmStep, setConfirmStep] = React.useState<0 | 1 | 2>(0)
   const [confirmTitle, setConfirmTitle] = React.useState<string>("")
@@ -169,6 +171,25 @@ export function PubsCardList({
     }
   }
 
+  async function handlePublishWithUrl(pub: Publicacao, url: string) {
+    const updated: Publicacao = {
+      ...pub,
+      status: "publicada",
+      link_publicado: url.trim(),
+    }
+    onUpdated(updated)
+    try {
+      const payload = buildPublicationUpdatePayload(updated, {
+        link_publicado: url.trim(),
+      })
+      await bridge("publicacoes", "update_publicado", payload)
+      toast({ title: "Publicação confirmada com sucesso!" })
+    } catch {
+      onUpdated(pub)
+      toast({ title: "Erro ao confirmar publicação", variant: "destructive" })
+    }
+  }
+
   function MediaBox({ p }: { p: Publicacao }) {
     console.log("=== DEBUG MediaBox ===")
     console.log("Publicacao ID:", p.id)
@@ -226,16 +247,7 @@ export function PubsCardList({
               />
             )
           ) : (
-            <div className="text-xs text-muted-foreground">
-              Sem mídia detectada
-              <div className="text-[10px] mt-1 opacity-50 bg-red-50 p-1 rounded">
-                Debug: paths={mediaPaths.length}, url="{url}", broken={broken.toString()}
-                <br />
-                Raw midia_urls: {JSON.stringify(p.midia_urls)}
-                <br />
-                Raw midia_url: {JSON.stringify(p.midia_url)}
-              </div>
-            </div>
+            <div className="text-xs text-muted-foreground">Midia em desenvolvimento</div>
           )}
         </div>
         {mediaCount > 1 ? (
@@ -364,7 +376,12 @@ export function PubsCardList({
             <div key={p.id} className={borderCls}>
               <div className="absolute top-2 right-2 flex gap-2">
                 {showPublishShortcut ? (
-                  <Button size="sm" variant="outline" onClick={() => onPublish(p)} aria-label="Publicado">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setPublishUrlDialog({ pub: p, url: "" })}
+                    aria-label="Publicado"
+                  >
                     <CheckCircle2 className="h-4 w-4 mr-1" />
                     Publicado
                   </Button>
@@ -412,6 +429,20 @@ export function PubsCardList({
               </div>
 
               <MediaBox p={p} />
+
+              {p.link_publicado && (
+                <div className="mb-2 p-2 bg-green-50 border border-green-200 rounded">
+                  <div className="text-xs font-medium text-green-800 mb-1">Link da publicação:</div>
+                  <a
+                    href={p.link_publicado}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-green-600 hover:text-green-800 underline text-sm break-all"
+                  >
+                    {p.link_publicado}
+                  </a>
+                </div>
+              )}
 
               {canManage || comentariosCount > 0 ? (
                 <div className="mb-2 rounded border bg-amber-50 p-2">
@@ -553,7 +584,8 @@ export function PubsCardList({
                       Aprovado
                     </Button>
                     <Button
-                      variant="destructive"
+                      variant="outline"
+                      className="bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500"
                       onClick={async () => {
                         if (!comment.trim()) return
                         const comentarioObj = {
@@ -575,7 +607,7 @@ export function PubsCardList({
                         }
                       }}
                     >
-                      Não aprovado
+                      Ajustar
                     </Button>
                   </div>
                 </div>
@@ -770,12 +802,6 @@ export function PubsCardList({
                         publicUrlFromPath(preview.pub.midia_urls[preview.index]) ||
                         "/placeholder.svg?height=300&width=600&query=preview-da-midia-da-publicacao" ||
                         "/placeholder.svg" ||
-                        "/placeholder.svg" ||
-                        "/placeholder.svg" ||
-                        "/placeholder.svg" ||
-                        "/placeholder.svg" ||
-                        "/placeholder.svg" ||
-                        "/placeholder.svg" ||
                         "/placeholder.svg"
                       }
                       alt="Mídia da publicação"
@@ -827,6 +853,41 @@ export function PubsCardList({
               }}
             >
               Enviar Avaliação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!publishUrlDialog} onOpenChange={() => setPublishUrlDialog(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmar Publicação</DialogTitle>
+            <DialogDescription>
+              Insira o link da publicação realizada para confirmar que foi publicada.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="https://..."
+              value={publishUrlDialog?.url || ""}
+              onChange={(e) => setPublishUrlDialog((prev) => (prev ? { ...prev, url: e.target.value } : null))}
+              className="w-full"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPublishUrlDialog(null)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={!publishUrlDialog?.url.trim()}
+              onClick={async () => {
+                if (publishUrlDialog && publishUrlDialog.url.trim()) {
+                  await handlePublishWithUrl(publishUrlDialog.pub, publishUrlDialog.url)
+                  setPublishUrlDialog(null)
+                }
+              }}
+            >
+              Confirmar Publicação
             </Button>
           </DialogFooter>
         </DialogContent>

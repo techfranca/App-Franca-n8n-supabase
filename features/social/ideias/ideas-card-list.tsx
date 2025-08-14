@@ -24,6 +24,7 @@ export function IdeasCardList({
   onDelete,
   onApprove,
   onReject,
+  onStatusChange, // Adicionando callback para notificar mudanças de status
 }: {
   items: Ideia[]
   getClienteNome: (clienteId: string) => string
@@ -33,9 +34,12 @@ export function IdeasCardList({
   onDelete?: (item: Ideia) => void
   onApprove?: (item: Ideia, comment?: string) => void
   onReject?: (item: Ideia, comment?: string) => void
+  onStatusChange?: (ideiaId: string, newStatus: string) => void // Nova prop para comunicar mudanças de status
 }) {
   const [comments, setComments] = React.useState<Record<string, string>>({})
   const [showAllComments, setShowAllComments] = React.useState<Record<string, boolean>>({})
+  const [isProcessing, setIsProcessing] = React.useState(false)
+  const [localItems, setLocalItems] = React.useState<Ideia[]>([])
   const [carrosselModal, setCarrosselModal] = React.useState<{
     aberto: boolean
     ideiaId: string | null
@@ -45,15 +49,45 @@ export function IdeasCardList({
     ideiaId: null,
     tipo: "ideia",
   })
+  const [commentRequiredDialog, setCommentRequiredDialog] = React.useState<{
+    aberto: boolean
+    tipo: "ajustar" | "reprovar" | null
+    ideia: Ideia | null
+    comentario: string
+  }>({
+    aberto: false,
+    tipo: null,
+    ideia: null,
+    comentario: "",
+  })
+  const [confirmDialog, setConfirmDialog] = React.useState<{
+    aberto: boolean
+    tipo: "ajustar" | "reprovar" | null
+    ideia: Ideia | null
+    comentario: string
+  }>({
+    aberto: false,
+    tipo: null,
+    ideia: null,
+    comentario: "",
+  })
   const { toast } = useToast()
+  const [delTarget, setDelTarget] = React.useState<Ideia | null>(null)
+  const [confirmStep, setConfirmStep] = React.useState<number>(0)
+  const [confirmTitle, setConfirmTitle] = React.useState<string>("")
+
+  React.useEffect(() => {
+    setLocalItems(items)
+  }, [items])
 
   const isClient = role === "cliente"
   const canEdit = role === "admin" || role === "colaborador"
   const canSeeComments = !isClient
 
   const filteredItems = React.useMemo(() => {
+    const itemsToFilter = localItems
     if (isClient && userClienteId) {
-      return items.filter(
+      return itemsToFilter.filter(
         (item) =>
           item.cliente_id === userClienteId &&
           item.status !== "em rascunho" &&
@@ -61,13 +95,8 @@ export function IdeasCardList({
           item.status !== "draft",
       )
     }
-    return items
-  }, [items, isClient, userClienteId])
-
-  // Confirmação dupla
-  const [delTarget, setDelTarget] = React.useState<Ideia | null>(null)
-  const [confirmStep, setConfirmStep] = React.useState<0 | 1 | 2>(0)
-  const [confirmTitle, setConfirmTitle] = React.useState<string>("")
+    return itemsToFilter
+  }, [localItems, isClient, userClienteId])
 
   const handleVerTudoIdeia = (ideiaId: string) => {
     setCarrosselModal({ aberto: true, ideiaId, tipo: "ideia" })
@@ -79,6 +108,200 @@ export function IdeasCardList({
 
   const handleFecharCarrosselModal = () => {
     setCarrosselModal({ aberto: false, ideiaId: null, tipo: "ideia" })
+  }
+
+  const handleApprove = async (ideia: Ideia, comment: string) => {
+    if (isProcessing) return
+    setIsProcessing(true)
+
+    try {
+      await bridge("ideias", "update_aprovado", {
+        id: ideia.id,
+        comentario: comment.trim() || undefined,
+      })
+      toast({
+        title: "Ideia aprovada com sucesso!",
+        description: "A ideia foi aprovada e enviada para produção.",
+        className: "bg-green-50 border-green-200",
+      })
+      onApprove?.(ideia, comment)
+      onStatusChange?.(ideia.id, "aprovada")
+    } catch (err: any) {
+      toast({
+        title: "Erro ao aprovar",
+        description: err?.message || String(err),
+        variant: "destructive",
+      })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleAjustar = async (ideia: Ideia, comment: string) => {
+    // A chamada será feita apenas em handleConfirmWithComment
+    onReject?.(ideia, comment)
+  }
+
+  const handleReprovar = async (ideia: Ideia, comment: string) => {
+    // A chamada será feita apenas em handleConfirmWithComment
+    onReject?.(ideia, comment)
+  }
+
+  const handleConfirmCommentRequired = async () => {
+    if (isProcessing) return
+
+    if (!commentRequiredDialog.comentario.trim()) {
+      toast({ title: "Por favor, preencha o comentário.", variant: "destructive" })
+      return
+    }
+
+    if (!commentRequiredDialog.ideia) return
+
+    const { tipo, ideia, comentario } = commentRequiredDialog
+
+    setCommentRequiredDialog({ aberto: false, tipo: null, ideia: null, comentario: "" })
+
+    setIsProcessing(true)
+
+    try {
+      if (tipo === "ajustar") {
+        await bridge("ideias", "update_ajustar", {
+          ...ideia,
+          status: "ideia_em_alteracao",
+          comentario: comentario,
+          comentarios: [
+            ...(ideia.comentarios || []),
+            {
+              autor: "Cliente",
+              texto: comentario,
+              created_at: new Date().toISOString(),
+            },
+          ],
+        })
+
+        setLocalItems((prevItems) =>
+          prevItems.map((item) => (item.id === ideia.id ? { ...item, status: "ideia_em_alteracao" as const } : item)),
+        )
+
+        onStatusChange?.(ideia.id, "ideia_em_alteracao")
+
+        toast({
+          title: "Solicitação de ajuste enviada",
+          description: "A ideia foi enviada para ajustes.",
+          className: "bg-yellow-50 border-yellow-200",
+        })
+      } else if (tipo === "reprovar") {
+        await bridge("ideias", "update_reprovado", {
+          ...ideia,
+          status: "reprovada",
+          comentario: comentario,
+          comentarios: [
+            ...(ideia.comentarios || []),
+            {
+              autor: "Cliente",
+              texto: comentario,
+              created_at: new Date().toISOString(),
+            },
+          ],
+        })
+
+        setLocalItems((prevItems) =>
+          prevItems.map((item) => (item.id === ideia.id ? { ...item, status: "reprovada" as const } : item)),
+        )
+
+        onStatusChange?.(ideia.id, "reprovada")
+
+        toast({
+          title: "Ideia reprovada",
+          description: "A ideia foi reprovada.",
+          className: "bg-red-50 border-red-200",
+        })
+      }
+    } catch (err: any) {
+      toast({
+        title: tipo === "ajustar" ? "Erro ao solicitar ajuste" : "Erro ao reprovar",
+        description: err?.message || String(err),
+        variant: "destructive",
+      })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleConfirmWithComment = async () => {
+    if (isProcessing) return
+
+    if (!confirmDialog.ideia) return
+
+    const { tipo, ideia, comentario } = confirmDialog
+
+    setConfirmDialog({ aberto: false, tipo: null, ideia: null, comentario: "" })
+
+    setIsProcessing(true)
+
+    try {
+      if (tipo === "ajustar") {
+        await bridge("ideias", "update_ajustar", {
+          ...ideia,
+          status: "ideia_em_alteracao",
+          comentario: comentario,
+          comentarios: [
+            ...(ideia.comentarios || []),
+            {
+              autor: "Cliente",
+              texto: comentario,
+              created_at: new Date().toISOString(),
+            },
+          ],
+        })
+
+        setLocalItems((prevItems) =>
+          prevItems.map((item) => (item.id === ideia.id ? { ...item, status: "ideia_em_alteracao" as const } : item)),
+        )
+
+        onStatusChange?.(ideia.id, "ideia_em_alteracao")
+
+        toast({
+          title: "Solicitação de ajuste enviada",
+          description: "A ideia foi enviada para ajustes.",
+          className: "bg-yellow-50 border-yellow-200",
+        })
+      } else if (tipo === "reprovar") {
+        await bridge("ideias", "update_reprovado", {
+          ...ideia,
+          status: "reprovada",
+          comentario: comentario,
+          comentarios: [
+            ...(ideia.comentarios || []),
+            {
+              autor: "Cliente",
+              texto: comentario,
+              created_at: new Date().toISOString(),
+            },
+          ],
+        })
+
+        setLocalItems((prevItems) =>
+          prevItems.map((item) => (item.id === ideia.id ? { ...item, status: "reprovada" as const } : item)),
+        )
+
+        onStatusChange?.(ideia.id, "reprovada")
+
+        toast({
+          title: "Ideia reprovada",
+          description: "A ideia foi reprovada.",
+          className: "bg-red-50 border-red-200",
+        })
+      }
+    } catch (err: any) {
+      toast({
+        title: tipo === "ajustar" ? "Erro ao solicitar ajuste" : "Erro ao reprovar",
+        description: err?.message || String(err),
+        variant: "destructive",
+      })
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   const ideiaCarrosselModal = carrosselModal.ideiaId ? filteredItems.find((i) => i.id === carrosselModal.ideiaId) : null
@@ -271,28 +494,67 @@ export function IdeasCardList({
                 <div className="mt-3 grid gap-2">
                   <Textarea
                     className="font-bold"
-                    placeholder="Comentário (obrigatório para reprovar)"
+                    placeholder="Comentário (opcional para aprovação, obrigatório para ajuste/reprovação)"
                     value={comment}
                     onChange={(e) => setComments((c) => ({ ...c, [i.id]: e.target.value }))}
                   />
                   <div className="flex gap-2">
                     <Button
-                      className="bg-[#7de08d] text-[#081534] hover:bg-[#4b8655]"
-                      onClick={() => onApprove?.(i, comment)}
+                      className="bg-green-600 text-white hover:bg-green-700"
+                      disabled={isProcessing}
+                      onClick={() => handleApprove(i, comment)}
                     >
                       Aprovado
                     </Button>
                     <Button
-                      variant="destructive"
-                      onClick={() => {
-                        if (!comment.trim()) {
-                          toast({ title: "Comentário é obrigatório para reprovar.", variant: "destructive" })
-                          return
+                      className="bg-yellow-600 text-white hover:bg-yellow-700"
+                      disabled={isProcessing}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        if (comment.trim()) {
+                          setConfirmDialog({
+                            aberto: true,
+                            tipo: "ajustar",
+                            ideia: i,
+                            comentario: comment.trim(),
+                          })
+                        } else {
+                          setCommentRequiredDialog({
+                            aberto: true,
+                            tipo: "ajustar",
+                            ideia: i,
+                            comentario: "",
+                          })
                         }
-                        onReject?.(i, comment)
                       }}
                     >
-                      Não aprovado
+                      Ajustar
+                    </Button>
+                    <Button
+                      className="bg-red-600 text-white hover:bg-red-700"
+                      disabled={isProcessing}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        if (comment.trim()) {
+                          setConfirmDialog({
+                            aberto: true,
+                            tipo: "reprovar",
+                            ideia: i,
+                            comentario: comment.trim(),
+                          })
+                        } else {
+                          setCommentRequiredDialog({
+                            aberto: true,
+                            tipo: "reprovar",
+                            ideia: i,
+                            comentario: "",
+                          })
+                        }
+                      }}
+                    >
+                      Reprovado
                     </Button>
                   </div>
                 </div>
@@ -410,6 +672,103 @@ export function IdeasCardList({
               }}
             >
               Sim, excluir definitivamente
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={commentRequiredDialog.aberto}
+        onOpenChange={(o) => {
+          if (!o) {
+            setCommentRequiredDialog({ aberto: false, tipo: null, ideia: null, comentario: "" })
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Comentário obrigatório</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {commentRequiredDialog.tipo === "ajustar"
+                ? "Para solicitar ajustes é necessário deixar um comentário explicando o que deve ser alterado."
+                : "Para reprovar é necessário deixar um comentário explicando o motivo da reprovação."}
+            </p>
+            <Textarea
+              className="font-bold"
+              placeholder="Digite seu comentário aqui..."
+              value={commentRequiredDialog.comentario}
+              onChange={(e) => setCommentRequiredDialog((prev) => ({ ...prev, comentario: e.target.value }))}
+              rows={4}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setCommentRequiredDialog({ aberto: false, tipo: null, ideia: null, comentario: "" })}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              className={
+                commentRequiredDialog.tipo === "ajustar"
+                  ? "bg-yellow-600 hover:bg-yellow-700"
+                  : "bg-red-600 hover:bg-red-700"
+              }
+              disabled={isProcessing}
+              onClick={handleConfirmCommentRequired}
+            >
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={confirmDialog.aberto}
+        onOpenChange={(o) => {
+          if (!o) {
+            setConfirmDialog({ aberto: false, tipo: null, ideia: null, comentario: "" })
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {confirmDialog.tipo === "ajustar" ? "Confirmar solicitação de ajuste" : "Confirmar reprovação"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {confirmDialog.tipo === "ajustar"
+                ? "Tem certeza que deseja solicitar ajustes nesta ideia?"
+                : "Tem certeza que deseja reprovar esta ideia?"}
+            </p>
+            <div className="bg-gray-50 p-3 rounded">
+              <p className="text-sm font-medium mb-1">Seu comentário:</p>
+              <p className="text-sm text-gray-700">{confirmDialog.comentario}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setConfirmDialog({ aberto: false, tipo: null, ideia: null, comentario: "" })}
+            >
+              Não
+            </Button>
+            <Button
+              type="button"
+              className={
+                confirmDialog.tipo === "ajustar" ? "bg-yellow-600 hover:bg-yellow-700" : "bg-red-600 hover:bg-red-700"
+              }
+              disabled={isProcessing}
+              onClick={handleConfirmWithComment}
+            >
+              Sim
             </Button>
           </DialogFooter>
         </DialogContent>
