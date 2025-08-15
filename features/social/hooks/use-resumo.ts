@@ -10,6 +10,7 @@ interface IdeiaRaw {
   status: string
   dataaprovacao: string | null
   datapostagem: string | null
+  plataforma?: string
   [key: string]: any
 }
 
@@ -19,6 +20,7 @@ interface PublicacaoRaw {
   status: string
   dataaprovacao: string | null
   datapostagem: string | null
+  plataforma?: string
   [key: string]: any
 }
 
@@ -104,6 +106,46 @@ function processarDados(dadosBrutos: any, periodo: { month: number; year: number
           .map((p) => p.cliente_id),
       ]).size
 
+  const plataformasCount = {
+    Instagram: 0,
+    Facebook: 0,
+    LinkedIn: 0,
+    TikTok: 0,
+    YouTube: 0,
+  }
+
+  // Contar plataformas das ideias
+  todasIdeias.forEach((ideia) => {
+    if (ideia.plataforma) {
+      const plataforma = ideia.plataforma.toString()
+      if (plataforma.toLowerCase().includes("instagram")) plataformasCount.Instagram++
+      else if (plataforma.toLowerCase().includes("facebook")) plataformasCount.Facebook++
+      else if (plataforma.toLowerCase().includes("linkedin")) plataformasCount.LinkedIn++
+      else if (plataforma.toLowerCase().includes("tiktok")) plataformasCount.TikTok++
+      else if (plataforma.toLowerCase().includes("youtube")) plataformasCount.YouTube++
+    }
+  })
+
+  // Contar plataformas das publicações
+  todasPublicacoes.forEach((pub) => {
+    if (pub.plataforma) {
+      const plataforma = pub.plataforma.toString()
+      if (plataforma.toLowerCase().includes("instagram")) plataformasCount.Instagram++
+      else if (plataforma.toLowerCase().includes("facebook")) plataformasCount.Facebook++
+      else if (plataforma.toLowerCase().includes("linkedin")) plataformasCount.LinkedIn++
+      else if (plataforma.toLowerCase().includes("tiktok")) plataformasCount.TikTok++
+      else if (plataforma.toLowerCase().includes("youtube")) plataformasCount.YouTube++
+    }
+  })
+
+  const totalPlataformas = Object.values(plataformasCount).reduce((sum, count) => sum + count, 0)
+
+  const distribuicaoPlataformas = Object.entries(plataformasCount).map(([nome, valor]) => ({
+    nome,
+    valor,
+    porcentagem: totalPlataformas > 0 ? `${Math.round((valor / totalPlataformas) * 100)}%` : "0%",
+  }))
+
   // Atividade recente (últimas 10 ações)
   const atividadeRecente = [
     ...todasIdeias.map((i) => ({
@@ -132,6 +174,7 @@ function processarDados(dadosBrutos: any, periodo: { month: number; year: number
     clientesAtivosNoMes,
     statusIdeias,
     statusPublicacoes,
+    distribuicaoPlataformas,
     atividadeRecente,
   }
 }
@@ -153,6 +196,7 @@ export function useResumoSocialMedia(clienteId: string | null, periodo: { month:
       reprovada: number
     }
     statusPublicacoes: { publicacao_em_aprovacao: number; agendada: number; publicada: number; em_design: number }
+    distribuicaoPlataformas: { nome: string; valor: number; porcentagem: string }[]
     atividadeRecente: { tipo: string; autor: string; quando: string; label: string; href?: string }[]
   } | null>(null)
 
