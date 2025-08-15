@@ -70,13 +70,13 @@ export function IdeaDrawer({ open, onOpenChange, ideia, onUpdated, onDeleted }: 
 
   async function handleSave() {
     try {
-      const dataAprovacaoISO =
+      const dataAprovacaoFormatted =
         dataAprovacao && horaAprovacao
-          ? new Date(`${format(dataAprovacao, "yyyy-MM-dd")}T${horaAprovacao}:00`).toISOString()
+          ? format(new Date(`${format(dataAprovacao, "yyyy-MM-dd")}T${horaAprovacao}:00`), "yyyy-MM-dd HH:mm:ss")
           : null
-      const dataPostagemISO =
+      const dataPostagemFormatted =
         dataPostagem && horaPostagem
-          ? new Date(`${format(dataPostagem, "yyyy-MM-dd")}T${horaPostagem}:00`).toISOString()
+          ? format(new Date(`${format(dataPostagem, "yyyy-MM-dd")}T${horaPostagem}:00`), "yyyy-MM-dd HH:mm:ss")
           : null
 
       const payload = {
@@ -92,8 +92,8 @@ export function IdeaDrawer({ open, onOpenChange, ideia, onUpdated, onDeleted }: 
         legenda: form.legenda ?? "",
         hashtags: form.hashtags ?? "",
         referencia: form.referencia ?? "",
-        dataAprovacao: dataAprovacaoISO,
-        dataPostagem: dataPostagemISO,
+        dataAprovacao: dataAprovacaoFormatted,
+        dataPostagem: dataPostagemFormatted,
         status: form.status,
         needs_reapproval: !!form.needs_reapproval,
       }
@@ -114,7 +114,6 @@ export function IdeaDrawer({ open, onOpenChange, ideia, onUpdated, onDeleted }: 
 
   async function handleResendForApproval() {
     try {
-      // Atualiza campos e envia status "ideia_em_aprovacao" de volta ao webhook
       const payload = {
         id: form.id,
         cliente_id: form.cliente_id,
@@ -128,8 +127,12 @@ export function IdeaDrawer({ open, onOpenChange, ideia, onUpdated, onDeleted }: 
         legenda: form.legenda ?? "",
         hashtags: form.hashtags ?? "",
         referencia: form.referencia ?? "",
-        dataAprovacao: form.data_aprovacao ? new Date(`${form.data_aprovacao}T00:00:00`).toISOString() : null,
-        dataPostagem: form.data_publicacao ? new Date(`${form.data_publicacao}T00:00:00`).toISOString() : null,
+        dataAprovacao: form.data_aprovacao
+          ? format(new Date(`${form.data_aprovacao}T00:00:00`), "yyyy-MM-dd HH:mm:ss")
+          : null,
+        dataPostagem: form.data_publicacao
+          ? format(new Date(`${form.data_publicacao}T00:00:00`), "yyyy-MM-dd HH:mm:ss")
+          : null,
         status: IDEA_STATUS.EM_APROVACAO,
         needs_reapproval: false,
       }

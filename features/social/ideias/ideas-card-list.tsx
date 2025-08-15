@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input"
 import { bridge } from "@/lib/bridge"
 import { CarrosselPreview } from "./carrossel-preview"
 import { CarrosselModal } from "./carrossel-modal"
+import { formatDateLocal, formatDateTimeLocal, formatTimeLocal } from "@/lib/utils-date"
+import { format } from "date-fns"
 
 export function IdeasCardList({
   items,
@@ -188,13 +190,14 @@ export function IdeasCardList({
           ...ideia,
           status: "ideia_em_alteracao",
           comentario: comentario,
-          comentarios_artes: comentariosArtesArray, // Enviando comentários das artes
+          comentarios_artes: comentariosArtesArray,
+          created_at: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
           comentarios: [
             ...(ideia.comentarios || []),
             {
               autor: "Cliente",
               texto: comentario,
-              created_at: new Date().toISOString(),
+              created_at: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
             },
           ],
         })
@@ -215,13 +218,14 @@ export function IdeasCardList({
           ...ideia,
           status: "reprovada",
           comentario: comentario,
-          comentarios_artes: comentariosArtesArray, // Enviando comentários das artes
+          comentarios_artes: comentariosArtesArray,
+          created_at: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
           comentarios: [
             ...(ideia.comentarios || []),
             {
               autor: "Cliente",
               texto: comentario,
-              created_at: new Date().toISOString(),
+              created_at: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
             },
           ],
         })
@@ -274,13 +278,14 @@ export function IdeasCardList({
           ...ideia,
           status: "ideia_em_alteracao",
           comentario: comentario,
-          comentarios_artes: comentariosArtesArray, // Enviando comentários das artes
+          comentarios_artes: comentariosArtesArray,
+          created_at: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
           comentarios: [
             ...(ideia.comentarios || []),
             {
               autor: "Cliente",
               texto: comentario,
-              created_at: new Date().toISOString(),
+              created_at: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
             },
           ],
         })
@@ -301,13 +306,14 @@ export function IdeasCardList({
           ...ideia,
           status: "reprovada",
           comentario: comentario,
-          comentarios_artes: comentariosArtesArray, // Enviando comentários das artes
+          comentarios_artes: comentariosArtesArray,
+          created_at: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
           comentarios: [
             ...(ideia.comentarios || []),
             {
               autor: "Cliente",
               texto: comentario,
-              created_at: new Date().toISOString(),
+              created_at: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
             },
           ],
         })
@@ -346,7 +352,7 @@ export function IdeasCardList({
     <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredItems.map((i) => {
-          const dataPost = i.data_publicacao ?? ""
+          const dataPost = i.data_publicacao_completa || i.data_publicacao || ""
           const comentarios = i.comentarios ?? []
           const comentariosCount = comentarios.length
           const cliente = i.cliente_nome ?? getClienteNome(i.cliente_id)
@@ -396,10 +402,7 @@ export function IdeasCardList({
                 {i.data_publicacao_completa && (
                   <span className="text-xs rounded bg-blue-100 text-blue-800 px-2 py-0.5 flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    {new Date(i.data_publicacao_completa).toLocaleTimeString("pt-BR", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {formatTimeLocal(i.data_publicacao_completa)}
                   </span>
                 )}
               </div>
@@ -452,11 +455,7 @@ export function IdeasCardList({
                     <div className="text-xs">
                       <div className="mb-1 text-muted-foreground">
                         <span className="font-medium">{lastComment?.autor || "Comentário"}</span>{" "}
-                        <span>
-                          {lastComment?.created_at
-                            ? "— " + new Date(lastComment.created_at).toLocaleString("pt-BR")
-                            : ""}
-                        </span>
+                        <span>{lastComment?.created_at ? "— " + formatDateTimeLocal(lastComment.created_at) : ""}</span>
                       </div>
                       <div className="max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
                         {lastComment?.texto || ""}
@@ -479,7 +478,7 @@ export function IdeasCardList({
                         <div key={idx} className="rounded border bg-white p-2">
                           <div className="mb-1 text-muted-foreground">
                             <span className="font-medium">{c.autor || "Comentário"}</span>{" "}
-                            <span>{c.created_at ? "— " + new Date(c.created_at).toLocaleString("pt-BR") : ""}</span>
+                            <span>{c.created_at ? "— " + formatDateTimeLocal(c.created_at) : ""}</span>
                           </div>
                           <div className="text-sm text-gray-700 max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
                             {c.texto || ""}
@@ -527,11 +526,19 @@ export function IdeasCardList({
               <div className="grid gap-2 mb-2 text-xs text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">Data de aprovação:</span>
-                  <span className="text-muted-foreground">{i.data_aprovacao || "—"}</span>
+                  <span className="text-muted-foreground">
+                    {i.data_aprovacao ? formatDateLocal(i.data_aprovacao) : "Não aprovada"}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-medium">Data de postagem:</span>
-                  <span className="text-muted-foreground">{i.data_publicacao || "Sem data"}</span>
+                  <span className="text-muted-foreground">
+                    {i.data_publicacao_completa
+                      ? formatDateLocal(i.data_publicacao_completa)
+                      : i.data_publicacao
+                        ? formatDateLocal(i.data_publicacao)
+                        : "Sem data"}
+                  </span>
                 </div>
                 {i.referencia ? (
                   <div className="flex items-center gap-2">
@@ -551,7 +558,13 @@ export function IdeasCardList({
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <CalendarDays className="h-4 w-4" />
-                  <span>{dataPost || "Sem data"}</span>
+                  <span>
+                    {i.data_publicacao_completa
+                      ? formatDateLocal(i.data_publicacao_completa)
+                      : i.data_publicacao
+                        ? formatDateLocal(i.data_publicacao)
+                        : "Sem data"}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1">
                   <MessageSquare className="h-4 w-4" />

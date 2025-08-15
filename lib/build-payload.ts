@@ -1,5 +1,6 @@
 import type { Ideia, Publicacao } from "@/lib/types"
 import { IDEA_STATUS } from "@/lib/status"
+import { format } from "date-fns"
 
 function normPath(v: unknown): string | null {
   const s = String(v ?? "").trim()
@@ -9,21 +10,36 @@ function normPath(v: unknown): string | null {
   return s
 }
 
+function formatDateTimeLocal(dateValue: string | Date | null): string | null {
+  if (!dateValue) return null
+  try {
+    const date = typeof dateValue === "string" ? new Date(dateValue) : dateValue
+    if (isNaN(date.getTime())) return null
+    return format(date, "yyyy-MM-dd HH:mm:ss")
+  } catch {
+    return null
+  }
+}
+
 // Payload completo para atualizar Ideia (inclui camelCase e underscores)
 export function buildIdeaUpdatePayload(idea: Ideia, extra?: { comentario?: string; status?: Ideia["status"] }) {
-  const nowISO = new Date().toISOString()
+  const nowFormatted = format(new Date(), "yyyy-MM-dd HH:mm:ss")
   const nextStatus = extra?.status ?? idea.status
 
-  const dataAprovacaoISO =
+  const dataAprovacaoFormatted =
     nextStatus === IDEA_STATUS.EM_DESIGN
       ? idea.data_aprovacao
-        ? new Date(`${idea.data_aprovacao}T00:00:00`).toISOString()
-        : nowISO
+        ? formatDateTimeLocal(new Date(`${idea.data_aprovacao}T00:00:00`))
+        : nowFormatted
       : idea.data_aprovacao
-        ? new Date(`${idea.data_aprovacao}T00:00:00`).toISOString()
+        ? formatDateTimeLocal(new Date(`${idea.data_aprovacao}T00:00:00`))
         : null
 
-  const dataPostagemISO = idea.data_publicacao ? new Date(`${idea.data_publicacao}T00:00:00`).toISOString() : null
+  const dataPostagemFormatted = idea.data_publicacao_completa
+    ? formatDateTimeLocal(idea.data_publicacao_completa)
+    : idea.data_publicacao
+      ? formatDateTimeLocal(new Date(`${idea.data_publicacao}T00:00:00`))
+      : null
 
   return {
     id: idea.id,
@@ -46,8 +62,8 @@ export function buildIdeaUpdatePayload(idea: Ideia, extra?: { comentario?: strin
     data_aprovacao: idea.data_aprovacao ?? null,
     data_publicacao: idea.data_publicacao ?? null,
 
-    dataAprovacao: dataAprovacaoISO,
-    dataPostagem: dataPostagemISO,
+    dataAprovacao: dataAprovacaoFormatted,
+    dataPostagem: dataPostagemFormatted,
 
     comentario: extra?.comentario ?? "",
   }
@@ -57,7 +73,7 @@ export function buildPublicationUpdatePayload(
   pub: Publicacao,
   extra?: { comentario?: string; status?: Publicacao["status"]; nota?: number },
 ) {
-  const nowISO = new Date().toISOString()
+  const nowFormatted = format(new Date(), "yyyy-MM-dd HH:mm:ss")
   const nextStatus = extra?.status ?? pub.status
 
   const paths = (pub.midia_urls ?? []).map((p) => normPath(p)).filter(Boolean) as string[]
@@ -69,8 +85,8 @@ export function buildPublicationUpdatePayload(
     midiaSequentials[`midia_url${i}`] = paths[i - 1] ?? null
   }
 
-  const dataPostagemISO = pub.data_postagem ? pub.data_postagem : null
-  const dataAgendadaISO = pub.data_agendada ? pub.data_agendada : null
+  const dataPostagemFormatted = formatDateTimeLocal(pub.data_postagem)
+  const dataAgendadaFormatted = formatDateTimeLocal(pub.data_agendada)
 
   return {
     id: pub.id,
@@ -93,9 +109,9 @@ export function buildPublicationUpdatePayload(
     comentarios: pub.comentarios ?? [],
     created_at: pub.created_at,
 
-    dataAprovacao: nowISO,
-    dataPostagem: nextStatus === "publicada" ? nowISO : dataPostagemISO,
-    dataAgendada: dataAgendadaISO,
+    dataAprovacao: nowFormatted,
+    dataPostagem: nextStatus === "publicada" ? nowFormatted : dataPostagemFormatted,
+    dataAgendada: dataAgendadaFormatted,
 
     comentario: extra?.comentario ?? "",
     nota: extra?.nota ?? null,
@@ -104,7 +120,7 @@ export function buildPublicationUpdatePayload(
 
 // Criação de Publicação a partir de Ideia (sem mídias; slots null)
 export function buildPublicationCreateFromIdeaPayload(idea: Ideia): Record<string, any> {
-  const toISODate = (ymd?: string | null) => (ymd ? new Date(`${ymd}T00:00:00`).toISOString() : null)
+  const toLocalDate = (ymd?: string | null) => (ymd ? formatDateTimeLocal(new Date(`${ymd}T00:00:00`)) : null)
   const midiaSequentials: Record<string, string | null> = {}
   for (let i = 1; i <= 10; i++) midiaSequentials[`midia_url${i}`] = null
 
@@ -135,11 +151,13 @@ export function buildPublicationCreateFromIdeaPayload(idea: Ideia): Record<strin
     data_agendada: null,
     data_postagem: null,
 
-    dataAprovacao: toISODate(idea.data_aprovacao),
-    dataPostagem: toISODate(idea.data_publicacao),
+    dataAprovacao: toLocalDate(idea.data_aprovacao),
+    dataPostagem: idea.data_publicacao_completa
+      ? formatDateTimeLocal(idea.data_publicacao_completa)
+      : toLocalDate(idea.data_publicacao),
     dataAgendada: null,
 
     comentarios: [],
-    created_at: new Date().toISOString(),
+    created_at: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
   }
 }

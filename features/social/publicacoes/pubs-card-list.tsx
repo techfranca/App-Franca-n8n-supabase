@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { publicUrlFromPath, uploadMediaFilesToSupabase } from "@/lib/supabase-client"
+import { formatDateLocal, formatDateTimeLocal } from "@/lib/utils-date"
+import { format } from "date-fns"
 
 export function PubsCardList({
   items,
@@ -150,7 +152,7 @@ export function PubsCardList({
 
   async function handleApprovalWithRating(pub: Publicacao, comment: string, rating: number) {
     const comentarioObj = comment.trim()
-      ? [{ texto: comment.trim(), autor: "Cliente", created_at: new Date().toISOString() }]
+      ? [{ texto: comment.trim(), autor: "Cliente", created_at: format(new Date(), "yyyy-MM-dd HH:mm:ss") }]
       : []
     const updated: Publicacao = {
       ...pub,
@@ -344,10 +346,7 @@ export function PubsCardList({
     <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredPublications.map((p) => {
-          const dataPost =
-            (p.data_postagem ? new Date(p.data_postagem) : null)?.toISOString().slice(0, 10) ||
-            (p.data_agendada ? new Date(p.data_agendada) : null)?.toISOString().slice(0, 10) ||
-            ""
+          const dataPost = formatDateLocal(p.data_postagem || p.data_agendada)
           const comentariosRaw = p.comentarios ?? []
           const comentarios = Array.isArray(comentariosRaw)
             ? comentariosRaw
@@ -451,11 +450,7 @@ export function PubsCardList({
                     <div className="text-xs">
                       <div className="mb-1 text-muted-foreground">
                         <span className="font-medium">{lastComment?.autor || "Comentário"}</span>{" "}
-                        <span>
-                          {lastComment?.created_at
-                            ? "— " + new Date(lastComment.created_at).toLocaleString("pt-BR")
-                            : ""}
-                        </span>
+                        <span>{lastComment?.created_at ? "— " + formatDateTimeLocal(lastComment.created_at) : ""}</span>
                       </div>
                       <div className="max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
                         {lastComment?.texto || ""}
@@ -478,7 +473,7 @@ export function PubsCardList({
                         <div key={idx} className="rounded border bg-white p-2">
                           <div className="mb-1 text-muted-foreground">
                             <span className="font-medium">{c.autor || "Comentário"}</span>{" "}
-                            <span>{c.created_at ? "— " + new Date(c.created_at).toLocaleString("pt-BR") : ""}</span>
+                            <span>{c.created_at ? "— " + formatDateTimeLocal(c.created_at) : ""}</span>
                           </div>
                           <div className="max-w-full overflow-x-hidden whitespace-pre-wrap break-words">
                             {c.texto || ""}
@@ -526,7 +521,7 @@ export function PubsCardList({
                       <div className="grid gap-1 text-xs">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">Data de aprovação:</span>
-                          <span className="text-muted-foreground">{idea.data_aprovacao || "—"}</span>
+                          <span className="text-muted-foreground">{formatDateLocal(idea.data_aprovacao)}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="font-medium">Data de postagem:</span>
@@ -591,7 +586,7 @@ export function PubsCardList({
                         const comentarioObj = {
                           texto: comment.trim(),
                           autor: "Cliente",
-                          created_at: new Date().toISOString(),
+                          created_at: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
                         }
                         const updated: Publicacao = {
                           ...p,
@@ -801,7 +796,6 @@ export function PubsCardList({
                       src={
                         publicUrlFromPath(preview.pub.midia_urls[preview.index]) ||
                         "/placeholder.svg?height=300&width=600&query=preview-da-midia-da-publicacao" ||
-                        "/placeholder.svg" ||
                         "/placeholder.svg"
                       }
                       alt="Mídia da publicação"
