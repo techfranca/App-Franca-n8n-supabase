@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import type { AuthUser } from "@/lib/types"
 import Link from "next/link"
+import { FeedbackDialog } from "@/components/feedback-dialog"
 
 export function AppSidebar() {
   const router = useRouter()
@@ -38,11 +39,12 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1">
-          <div className="h-8 w-8 rounded-md bg-[#7de08d] text-[#081534] flex items-center justify-center font-bold">
-            F.
-          </div>
-          <div className="font-semibold text-[#081534]">Franca</div>
+        <div className="flex items-center justify-center px-4 py-3">
+          <img
+            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Group%201777-gTL5rthUt3f5OiFstM3q0WWvz3F5B8.png"
+            alt="França Assessoria Logo"
+            className="h-12 w-auto object-contain"
+          />
         </div>
         <div className="px-2 py-2 border-t">
           <DropdownMenu>
@@ -139,6 +141,11 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <FeedbackDialog />
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={() => {

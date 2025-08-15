@@ -69,12 +69,12 @@ export function PublicationDrawer({ open, onOpenChange, pub, onUpdated }: Props)
   async function handleSave() {
     if (!form) return
 
-    const dataAgendadaFormatted =
+    const dataAgendadaISO =
       dataAgendada && horaAgendada
         ? format(new Date(`${format(dataAgendada, "yyyy-MM-dd")}T${horaAgendada}:00`), "yyyy-MM-dd HH:mm:ss")
         : null
 
-    const updatedForm = { ...form, data_agendada: dataAgendadaFormatted }
+    const updatedForm = { ...form, data_agendada: dataAgendadaISO }
     setForm(updatedForm)
 
     const payload = buildPublicationUpdatePayload(updatedForm)
@@ -435,4 +435,3 @@ export function PublicationDrawer({ open, onOpenChange, pub, onUpdated }: Props)
     </>
   )
 }
-</merged_code>

@@ -70,11 +70,11 @@ export function IdeaDrawer({ open, onOpenChange, ideia, onUpdated, onDeleted }: 
 
   async function handleSave() {
     try {
-      const dataAprovacaoFormatted =
+      const dataAprovacaoISO =
         dataAprovacao && horaAprovacao
           ? format(new Date(`${format(dataAprovacao, "yyyy-MM-dd")}T${horaAprovacao}:00`), "yyyy-MM-dd HH:mm:ss")
           : null
-      const dataPostagemFormatted =
+      const dataPostagemISO =
         dataPostagem && horaPostagem
           ? format(new Date(`${format(dataPostagem, "yyyy-MM-dd")}T${horaPostagem}:00`), "yyyy-MM-dd HH:mm:ss")
           : null
@@ -92,8 +92,8 @@ export function IdeaDrawer({ open, onOpenChange, ideia, onUpdated, onDeleted }: 
         legenda: form.legenda ?? "",
         hashtags: form.hashtags ?? "",
         referencia: form.referencia ?? "",
-        dataAprovacao: dataAprovacaoFormatted,
-        dataPostagem: dataPostagemFormatted,
+        dataAprovacao: dataAprovacaoISO,
+        dataPostagem: dataPostagemISO,
         status: form.status,
         needs_reapproval: !!form.needs_reapproval,
       }
