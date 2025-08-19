@@ -36,12 +36,13 @@ export const TODOS_OS_USUARIOS: AuthUser[] = [
     role: "admin",
     cliente_id: null, // Admin não tem cliente_id
   },
+  // Social Media Users
   {
     id: "user_bruna",
     email: "bruna",
     password: "bruna123",
-    name: "Bruna (administrador)",
-    role: "admin",
+    name: "Bruna (social media)",
+    role: "social_media",
     cliente_id: null,
   },
   {

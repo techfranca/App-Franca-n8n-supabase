@@ -34,6 +34,9 @@ export function StatusBadge({
     if (status === "em_design") {
       label = "Em Design"
       cls = "bg-blue-100 text-blue-900"
+    } else if (status === "revisao") {
+      label = "Em Revisão"
+      cls = "bg-purple-100 text-purple-900"
     } else if (status === "publicacao_em_aprovacao") {
       label = "Em Aprovação"
       cls = "bg-yellow-100 text-yellow-900"

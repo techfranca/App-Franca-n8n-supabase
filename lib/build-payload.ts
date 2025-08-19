@@ -71,7 +71,7 @@ export function buildIdeaUpdatePayload(idea: Ideia, extra?: { comentario?: strin
 
 export function buildPublicationUpdatePayload(
   pub: Publicacao,
-  extra?: { comentario?: string; status?: Publicacao["status"]; nota?: number },
+  extra?: { comentario?: string; status?: Publicacao["status"]; nota?: number; [key: string]: any },
 ) {
   const nowFormatted = format(new Date(), "yyyy-MM-dd HH:mm:ss")
   const nextStatus = extra?.status ?? pub.status
@@ -88,7 +88,7 @@ export function buildPublicationUpdatePayload(
   const dataPostagemFormatted = formatDateTimeLocal(pub.data_postagem)
   const dataAgendadaFormatted = formatDateTimeLocal(pub.data_agendada)
 
-  return {
+  const basePayload = {
     id: pub.id,
     cliente_id: pub.cliente_id,
     ideia_id: pub.ideia_id ?? null,
@@ -116,6 +116,14 @@ export function buildPublicationUpdatePayload(
     comentario: extra?.comentario ?? "",
     nota: extra?.nota ?? null,
   }
+
+  // Incluir todos os campos extras adicionais (como atualizacao)
+  if (extra) {
+    const { comentario, status, nota, ...otherExtras } = extra
+    Object.assign(basePayload, otherExtras)
+  }
+
+  return basePayload
 }
 
 // Criação de Publicação a partir de Ideia (sem mídias; slots null)

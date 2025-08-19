@@ -14,7 +14,7 @@ export async function POST(req: Request) {
       id: string
       name: string
       email: string
-      role: "admin" | "colaborador" | "cliente"
+      role: "admin" | "colaborador" | "cliente" | "social_media" // Adicionando social_media ao tipo
       cliente_id?: string | null
     }
   }

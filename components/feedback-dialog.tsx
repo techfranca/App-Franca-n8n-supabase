@@ -9,6 +9,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { MessageSquare, Bug, Lightbulb, Heart, HelpCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { SidebarMenuButton } from "@/components/ui/sidebar"
+import { bridge } from "@/lib/bridge"
+import { getUser } from "@/lib/auth-client"
+import { format } from "date-fns"
 
 type FeedbackType = "problema_tecnico" | "melhoria" | "elogio" | "outro"
 
@@ -59,19 +62,28 @@ export function FeedbackDialog() {
     setSubmitting(true)
 
     try {
-      // Simular envio do feedback
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const user = getUser()
+      const dataFeedback = format(new Date(), "yyyy-MM-dd HH:mm:ss")
+
+      await bridge("feedbacks", "feedback_enviado", {
+        tipo_feedback: selectedType,
+        mensagem: message.trim(),
+        cliente_id: user?.cliente_id || null,
+        user_id: user?.id || null,
+        user_name: user?.name || null,
+        data_feedback: dataFeedback,
+      })
 
       toast({
         title: "Feedback enviado!",
         description: "Obrigado pelo seu feedback. Nossa equipe irá analisá-lo em breve.",
       })
 
-      // Reset form
       setMessage("")
       setSelectedType("melhoria")
       setOpen(false)
     } catch (error) {
+      console.error("[v0] Erro ao enviar feedback:", error)
       toast({
         title: "Erro ao enviar feedback",
         description: "Tente novamente em alguns instantes.",
@@ -99,7 +111,6 @@ export function FeedbackDialog() {
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Tipo de Feedback */}
           <div className="space-y-3">
             <Label className="text-sm font-medium text-[#081534]">Tipo de feedback</Label>
             <RadioGroup
@@ -132,7 +143,6 @@ export function FeedbackDialog() {
             </RadioGroup>
           </div>
 
-          {/* Mensagem */}
           <div className="space-y-2">
             <Label className="text-sm font-medium text-[#081534]">Sua mensagem *</Label>
             <Textarea
@@ -145,7 +155,6 @@ export function FeedbackDialog() {
             <div className="text-xs text-gray-500 text-right">{message.length}/1000 caracteres</div>
           </div>
 
-          {/* Botões */}
           <div className="flex gap-3 justify-end pt-4 border-t">
             <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>
               Cancelar

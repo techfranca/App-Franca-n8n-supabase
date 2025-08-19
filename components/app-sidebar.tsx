@@ -1,6 +1,6 @@
 "use client"
 
-import { MessagesSquare, Lightbulb, Send, ChevronDown, LogOut, BarChart3 } from "lucide-react"
+import { MessagesSquare, Lightbulb, Send, ChevronDown, LogOut, BarChart3, Home } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -34,7 +34,7 @@ export function AppSidebar() {
     setUser(getUser())
   }, [])
 
-  const canChangeRole = user?.role === "admin" || user?.role === "colaborador"
+  const canChangeRole = user?.role === "admin" || user?.role === "colaborador" || user?.role === "social_media"
 
   return (
     <Sidebar collapsible="icon">
@@ -81,6 +81,14 @@ export function AppSidebar() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
+                    setRole("social_media")
+                    setUser(getUser())
+                  }}
+                >
+                  Tornar Social Media
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
                     setRole("admin")
                     setUser(getUser())
                   }}
@@ -96,6 +104,14 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/">
+                    <Home className="text-[#4b8655]" />
+                    <span>Home</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <Collapsible defaultOpen className="group/collapsible">
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>

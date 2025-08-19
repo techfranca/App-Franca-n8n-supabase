@@ -12,6 +12,7 @@ export type IdeiaStatus =
 
 export type PublicacaoStatus =
   | "em_design"
+  | "revisao" // Adicionando novo status para revisão da social media
   | "publicacao_em_aprovacao"
   | "publicacao_em_alteracao"
   | "aprovado"
@@ -72,10 +73,11 @@ export interface Publicacao {
   data_postagem?: string | null // ISO
   link_publicado?: string | null
   comentarios?: { autor: string; texto: string; created_at: string }[]
+  comentarios_midias?: { midia_index: number; comentario: string }[] // Adding comentarios_midias field for media-specific comments
   created_at: string
 }
 
-export type UserRole = "admin" | "colaborador" | "cliente"
+export type UserRole = "admin" | "colaborador" | "cliente" | "social_media"
 
 export interface AuthUser {
   id: string

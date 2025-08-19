@@ -69,12 +69,30 @@ function parseComentarios(v: unknown): { autor: string; texto: string; created_a
   return []
 }
 
+function parseComentariosMidias(v: unknown): { midia_index: number; comentario: string }[] {
+  if (Array.isArray(v)) return v as any
+
+  if (typeof v === "string" && v.trim()) {
+    try {
+      const parsed = JSON.parse(v)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
+
+  return []
+}
+
 function mapInboundPublicationStatus(raw: unknown, fallback: Publicacao["status"]): Publicacao["status"] {
   const s = normalizeKey(raw)
   if (!s) return fallback
   switch (s) {
     case "em_design":
       return "em_design"
+    case "revisao":
+    case "em_revisao":
+      return "revisao"
     case "publicacao_em_aprovacao":
     case "em_aprovacao":
     case "aguardando_aprovacao":
@@ -159,9 +177,13 @@ export function normalizePublication(input: any, fallbackStatus: Publicacao["sta
     input?.link_publicado ?? input?.linkPublicado ?? input?.published_url ?? input?.publishedUrl ?? null
 
   const comentarios = parseComentarios(input?.comentarios)
+  const comentarios_midias = parseComentariosMidias(input?.comentarios_midias)
   const created_at = String(input?.created_at ?? input?.createdAt ?? new Date().toISOString())
 
   const nota = input?.nota ? Number(input.nota) : null
+
+  const atualizacao = input?.atualizacao ?? null
+  const prioridade = input?.prioridade ?? null
 
   return {
     id,
@@ -179,7 +201,10 @@ export function normalizePublication(input: any, fallbackStatus: Publicacao["sta
     data_postagem: data_postagem ?? null,
     link_publicado: link_publicado ?? null,
     comentarios,
+    comentarios_midias,
     created_at,
-    nota, // Incluindo campo nota no objeto retornado
+    nota,
+    atualizacao,
+    prioridade,
   }
 }
