@@ -26,12 +26,17 @@ export function ClientCombobox({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" aria-expanded={open} className="w-64 justify-between bg-transparent">
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between bg-transparent"
+        >
           <span className={cn(!current && "text-muted-foreground")}>{current ? current.nome : placeholder}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-0">
+      <PopoverContent className="w-full p-0">
         <Command>
           <CommandInput placeholder="Buscar cliente..." />
           <CommandList>

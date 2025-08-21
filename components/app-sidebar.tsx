@@ -35,6 +35,7 @@ export function AppSidebar() {
   }, [])
 
   const canChangeRole = user?.role === "admin" || user?.role === "colaborador" || user?.role === "social_media"
+  const isAdmin = user?.role === "admin"
 
   return (
     <Sidebar collapsible="icon">

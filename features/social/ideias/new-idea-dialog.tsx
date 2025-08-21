@@ -13,6 +13,7 @@ import { CalendarIcon, Clock } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
+import { ClientCombobox } from "@/components/client-combobox"
 import type { Formato, Plataforma, Ideia, AuthUser, IdeiaStatus } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { bridge } from "@/lib/bridge"
@@ -40,7 +41,6 @@ export function NewIdeaDialog({
     titulo: "",
     referencia: "",
     plataforma: "Instagram",
-    hashtags: "",
     formato: "Reels",
     ideia: "",
     objetivo: "",
@@ -123,7 +123,7 @@ export function NewIdeaDialog({
           {triggerLabel}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-7xl w-[98vw] max-h-[95vh] overflow-y-auto font-montserrat">
+      <DialogContent className="max-w-[98vw] w-full max-h-[95vh] overflow-y-auto font-montserrat">
         <DialogHeader className="pb-4">
           <DialogTitle className="text-xl font-semibold text-[#081534]">Nova Ideia</DialogTitle>
         </DialogHeader>
@@ -134,28 +134,22 @@ export function NewIdeaDialog({
             <h3 className="font-semibold text-[#081534] mb-3 text-sm">Informações Básicas</h3>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#081534]">Cliente *</Label>
-                <Select
-                  value={(data.cliente_id as string) || ""}
-                  onValueChange={(v) => setData((d) => ({ ...d, cliente_id: v }))}
-                >
-                  <SelectTrigger className="h-11 text-sm font-montserrat font-bold">
-                    <SelectValue placeholder="Selecione um cliente" />
-                  </SelectTrigger>
-                  <SelectContent className="font-montserrat">
-                    {clientes.map((c) => (
-                      <SelectItem key={c.id} value={c.id} className="text-sm font-montserrat font-bold">
-                        {c.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className="text-sm font-medium text-[#081534]">Cliente</Label>
+                <div className="w-full">
+                  <ClientCombobox
+                    clientes={clientes}
+                    value={data.cliente_id || null}
+                    onChange={(id) => setData((d) => ({ ...d, cliente_id: id || "" }))}
+                    placeholder="Selecionar cliente..."
+                    className="w-full"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#081534]">Título *</Label>
+                <Label className="text-sm font-medium text-[#081534]">Título</Label>
                 <Input
-                  className="h-11 text-sm font-montserrat font-bold"
+                  className="h-11 text-sm font-montserrat font-bold w-full"
                   value={data.titulo ?? ""}
                   onChange={(e) => setData((d) => ({ ...d, titulo: e.target.value }))}
                   placeholder="Digite o título da ideia"
@@ -163,7 +157,7 @@ export function NewIdeaDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#081534]">Plataforma</Label>
                 <Select
@@ -200,16 +194,6 @@ export function NewIdeaDialog({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#081534]">CTA</Label>
-                <Input
-                  className="h-11 text-sm font-montserrat font-bold"
-                  value={data.cta ?? ""}
-                  onChange={(e) => setData((d) => ({ ...d, cta: e.target.value }))}
-                  placeholder="Call to action"
-                />
               </div>
             </div>
           </div>
@@ -253,16 +237,6 @@ export function NewIdeaDialog({
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#081534]">Hashtags</Label>
-                <Input
-                  className="h-11 text-sm font-montserrat font-bold"
-                  value={data.hashtags ?? ""}
-                  onChange={(e) => setData((d) => ({ ...d, hashtags: e.target.value }))}
-                  placeholder="#hashtag1 #hashtag2"
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#081534]">Referência (URL)</Label>
                 <Input
                   className="h-11 text-sm font-montserrat font-bold"
@@ -272,20 +246,9 @@ export function NewIdeaDialog({
                 />
               </div>
             </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#081534]">Objetivo</Label>
-                <Textarea
-                  className="min-h-[80px] resize-none text-sm font-montserrat font-bold"
-                  value={data.objetivo ?? ""}
-                  onChange={(e) => setData((d) => ({ ...d, objetivo: e.target.value }))}
-                  placeholder="Qual o objetivo desta ideia?"
-                />
-              </div>
-            </div>
           </div>
 
+          {/* Seção: Agendamento */}
           <div className="border border-gray-200 p-4 rounded-lg space-y-4">
             <h3 className="font-semibold text-[#081534] mb-3 text-sm">Agendamento</h3>
             <div className="space-y-6">
@@ -385,7 +348,7 @@ export function NewIdeaDialog({
               onClick={() => create(isCliente ? "rascunho" : "ideia_em_aprovacao")}
               disabled={pending}
             >
-              {pending ? "Enviando..." : isCliente ? "Sugerir Ideia" : "Criar & Enviar para aprovação"}
+              {pending ? "Enviando..." : isCliente ? "Sugerir Ideia" : "Enviar para aprovação"}
             </Button>
           </div>
         </div>
